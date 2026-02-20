@@ -60,13 +60,13 @@ export const GroupCard: React.FC<GroupCardProps> = ({
 
   return (
     <div 
-      className={cardClass}
+      className={`${cardClass} dark:bg-[var(--color-surface)] dark:border dark:border-[var(--color-border)] dark:text-[var(--color-text)]`}
       onClick={onClick}
       tabIndex={onClick ? 0 : -1}
       onKeyDown={onClick ? (e) => e.key === 'Enter' && onClick() : undefined}
     >
       <div className={`flex justify-between items-start ${isCompact ? 'mb-3' : 'mb-4'}`}>
-        <h3 className={`font-bold ${isCompact ? 'text-lg' : isSpaciousOrElevated ? 'text-2xl' : 'text-xl'}`}>
+        <h3 className={`font-bold dark:text-[var(--color-text)] ${isCompact ? 'text-lg' : isSpaciousOrElevated ? 'text-2xl' : 'text-xl'}`}>
           {groupName}
         </h3>
         <span 
@@ -92,7 +92,7 @@ export const GroupCard: React.FC<GroupCardProps> = ({
 
         <div className={`flex justify-between items-center ${isCompact ? 'text-xs' : 'text-sm'}`}>
           <span className="theme-muted">Total Contributed</span>
-          <span className="font-semibold">${totalContributions.toFixed(2)}</span>
+          <span className="font-semibold dark:text-[var(--color-text)]">${totalContributions.toFixed(2)}</span>
         </div>
 
         <div className={`flex justify-between items-center ${isCompact ? 'text-xs' : 'text-sm'}`}>

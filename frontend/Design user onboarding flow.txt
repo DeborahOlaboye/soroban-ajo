@@ -1,0 +1,80 @@
+Ajo – Onboarding Experience
+
+This project showcases the onboarding flow I designed for Ajo, a community-based savings platform.
+
+The goal was to create a simple, secure, and frictionless experience that guides users from introduction to wallet connection and profile setup.
+
+✨ Overview
+
+I worked on designing a 3-step onboarding flow:
+
+Welcome Screen
+
+Connect Wallet
+
+Profile Setup
+
+The experience focuses on clarity, trust, and minimal cognitive load.
+
+🖼 Screens
+1. Welcome
+
+Objective: Introduce the platform with a clear value proposition.
+
+Simple, confident headline
+
+Focused call-to-action
+
+Clean visual hierarchy
+
+Community-driven messaging
+
+Save together. Grow together.
+
+2. Connect Wallet
+
+Objective: Make wallet connection feel secure and effortless.
+
+Minimal wallet selection layout
+
+Clear step indicator (progress awareness)
+
+Security reassurance (“Secure & Encrypted”)
+
+Reduced friction in decision-making
+
+Design priority: trust + simplicity.
+
+3. Profile Setup
+
+Objective: Personalize the experience without overwhelming the user.
+
+Friendly, lightweight copy
+
+Clear input guidance
+
+Minimal form design
+
+Strong primary CTA
+
+Designed to feel quick and intuitive.
+
+🎯 Design Principles
+
+Minimal interface
+
+Strong visual hierarchy
+
+Clear progression
+
+Web3 trust signals
+
+Community-first messaging
+
+🛠 Tools Used
+
+Figma
+
+Component-based design system
+
+Dark mode UI

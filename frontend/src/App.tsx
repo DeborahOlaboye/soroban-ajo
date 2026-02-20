@@ -10,8 +10,9 @@ import { ResponsiveLayout } from '@/components/ResponsiveLayout'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { Tutorial } from '@/components/Tutorial'
 import { ThemeToggle } from '@/components/ThemeToggle'
+import { Explore } from '@/pages/Explore'
 
-type ViewType = 'dashboard' | 'create' | 'detail' | 'analytics' | 'responsive'
+type ViewType = 'dashboard' | 'create' | 'detail' | 'analytics' | 'responsive' | 'explore'
 
 function App() {
   const [currentView, setCurrentView] = useState<ViewType>('dashboard')
@@ -69,6 +70,16 @@ function App() {
             >
               Responsive Demo
             </button>
+            <button
+              onClick={() => setCurrentView('explore')}
+              className={`px-4 py-2 rounded font-semibold transition ${
+                currentView === 'explore'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              Explore
+            </button>
           </div>
         </div>
 
@@ -93,6 +104,8 @@ function App() {
             {currentView === 'analytics' && <GroupAnalytics />}
 
             {currentView === 'responsive' && <ResponsiveLayout />}
+
+            {currentView === 'explore' && <Explore />}
           </ErrorBoundary>
         </main>
 
