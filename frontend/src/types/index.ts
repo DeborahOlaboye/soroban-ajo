@@ -13,6 +13,9 @@ export interface Group {
   status: 'active' | 'completed' | 'paused'
   createdAt: string
   nextPayoutDate: string
+  frequency?: 'weekly' | 'monthly'
+  duration?: number
+  invitedMembers?: string[]
 }
 
 export interface Member {
@@ -48,3 +51,43 @@ export interface WalletConnection {
   network: 'testnet' | 'mainnet'
   balance?: number
 }
+
+export interface TransactionFilters {
+  dateRange?: {
+    start: string
+    end: string
+  }
+  type?: 'contribution' | 'payout' | 'refund' | 'all'
+  member?: string
+  status?: 'pending' | 'confirmed' | 'failed' | 'all'
+}
+
+export type TransactionSortField = 'date' | 'amount' | 'member' | 'type'
+export type SortDirection = 'asc' | 'desc'
+
+export interface TransactionSort {
+  field: TransactionSortField
+  direction: SortDirection
+}
+
+export interface ValidationError {
+  field: string
+  message: string
+}
+
+export interface ContributionValidation {
+  isValid: boolean
+  errors: ValidationError[]
+}
+
+export interface ContributionFormData {
+  amount: number
+  groupId: string
+  userBalance?: number
+  requiredAmount: number
+  hasExistingContribution?: boolean
+  lastContributionDate?: string
+}
+
+// Re-export profile types
+export type { UserProfile, UserPreferences, UserStats, ActivityItem } from './profile'

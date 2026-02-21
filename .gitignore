@@ -22,12 +22,16 @@ Cargo.lock
 *~
 .DS_Store
 
-# Node (for future frontend)
+# Node & Next.js
 node_modules/
 npm-debug.log
 yarn-error.log
 dist/
 build/
+.next/
+out/
+*.tsbuildinfo
+next-env.d.ts
 
 # Logs
 *.log
@@ -42,4 +46,6 @@ coverage/
 Thumbs.db
 .cache/
 
-.kiro
+# Kiro (allow specs to be tracked)
+.kiro/*
+!.kiro/specs/

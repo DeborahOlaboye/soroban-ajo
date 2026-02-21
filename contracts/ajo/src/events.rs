@@ -1,4 +1,4 @@
-use soroban_sdk::{symbol_short, Address, Env, Symbol};
+use soroban_sdk::{symbol_short, Address, Env};
 
 /// Emit an event when a group is created
 pub fn emit_group_created(
@@ -46,4 +46,22 @@ pub fn emit_payout_executed(
 pub fn emit_group_completed(env: &Env, group_id: u64) {
     let topics = (symbol_short!("complete"), group_id);
     env.events().publish(topics, ());
+}
+
+/// Emit an event when a cycle advances
+pub fn emit_cycle_advanced(env: &Env, group_id: u64, new_cycle: u32, cycle_start_time: u64) {
+    let topics = (symbol_short!("cycle"), group_id);
+    env.events().publish(topics, (new_cycle, cycle_start_time));
+}
+
+/// Emit an event when a group is cancelled by its creator
+pub fn emit_group_cancelled(
+    env: &Env,
+    group_id: u64,
+    creator: &Address,
+    member_count: u32,
+    refund_per_member: i128,
+) {
+    let topics = (symbol_short!("cancel"), group_id);
+    env.events().publish(topics, (creator, member_count, refund_per_member));
 }
