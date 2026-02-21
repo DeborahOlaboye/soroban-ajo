@@ -294,3 +294,246 @@ fn test_multiple_groups() {
     assert_eq!(group1.contribution_amount, 100_000_000i128);
     assert_eq!(group2.contribution_amount, 200_000_000i128);
 }
+#[test]
+fn test_get_group_status_initial_state() {
+    let (env, client, creator, member2, member3) = setup_test_env();
+    
+    // Create group
+    let group_id = client.create_group(&creator, &100_000_000i128, &604_800u64, &3u32);
+    client.join_group(&member2, &group_id);
+    client.join_group(&member3, &group_id);
+    
+    // Get status at initialization
+    let status = client.get_group_status(&group_id).unwrap();
+    
+    // Should be at cycle 1
+    assert_eq!(status.current_cycle, 1);
+    
+    // Next recipient should be the creator (payout_index = 0)
+    assert_eq!(status.next_recipient, creator);
+    
+    // All members should be pending contributions
+    assert_eq!(status.contributions_pending.len(), 3);
+}
+
+#[test]
+fn test_get_group_status_partial_contributions() {
+    let (env, client, creator, member2, member3) = setup_test_env();
+    
+    // Create and populate group
+    let group_id = client.create_group(&creator, &100_000_000i128, &604_800u64, &3u32);
+    client.join_group(&member2, &group_id);
+    client.join_group(&member3, &group_id);
+    
+    // Only creator and member2 contribute
+    client.contribute(&creator, &group_id);
+    client.contribute(&member2, &group_id);
+    
+    // Get status with partial contributions
+    let status = client.get_group_status(&group_id).unwrap();
+    
+    // Still at cycle 1
+    assert_eq!(status.current_cycle, 1);
+    
+    // Next recipient still the creator
+    assert_eq!(status.next_recipient, creator);
+    
+    // Only member3 should be pending
+    assert_eq!(status.contributions_pending.len(), 1);
+    assert_eq!(status.contributions_pending.get(0), member3);
+}
+
+#[test]
+fn test_get_group_status_all_contributed() {
+    let (env, client, creator, member2, member3) = setup_test_env();
+    
+    // Create and populate group
+    let group_id = client.create_group(&creator, &100_000_000i128, &604_800u64, &3u32);
+    client.join_group(&member2, &group_id);
+    client.join_group(&member3, &group_id);
+    
+    // All members contribute
+    client.contribute(&creator, &group_id);
+    client.contribute(&member2, &group_id);
+    client.contribute(&member3, &group_id);
+    
+    // Get status after all contributions
+    let status = client.get_group_status(&group_id).unwrap();
+    
+    // Still at cycle 1
+    assert_eq!(status.current_cycle, 1);
+    
+    // Next recipient still the creator
+    assert_eq!(status.next_recipient, creator);
+    
+    // No one should be pending
+    assert_eq!(status.contributions_pending.len(), 0);
+}
+
+#[test]
+fn test_get_group_status_after_payout() {
+    let (env, client, creator, member2, member3) = setup_test_env();
+    
+    // Create and populate group
+    let group_id = client.create_group(&creator, &100_000_000i128, &604_800u64, &3u32);
+    client.join_group(&member2, &group_id);
+    client.join_group(&member3, &group_id);
+    
+    // Cycle 1: All contribute and payout executed
+    client.contribute(&creator, &group_id);
+    client.contribute(&member2, &group_id);
+    client.contribute(&member3, &group_id);
+    client.execute_payout(&group_id);
+    
+    // Get status after payout (now in cycle 2)
+    let status = client.get_group_status(&group_id).unwrap();
+    
+    // Should be at cycle 2
+    assert_eq!(status.current_cycle, 2);
+    
+    // Next recipient should be member2 (payout_index = 1)
+    assert_eq!(status.next_recipient, member2);
+    
+    // All members should be pending contributions for cycle 2
+    assert_eq!(status.contributions_pending.len(), 3);
+}
+
+#[test]
+fn test_get_group_status_multiple_cycles() {
+    let (env, client, creator, member2, member3) = setup_test_env();
+    
+    // Create and populate group
+    let group_id = client.create_group(&creator, &100_000_000i128, &604_800u64, &3u32);
+    client.join_group(&member2, &group_id);
+    client.join_group(&member3, &group_id);
+    
+    // Cycle 1: Creator receives payout
+    client.contribute(&creator, &group_id);
+    client.contribute(&member2, &group_id);
+    client.contribute(&member3, &group_id);
+    client.execute_payout(&group_id);
+    
+    // Cycle 2: Member2 receives payout
+    client.contribute(&creator, &group_id);
+    client.contribute(&member2, &group_id);
+    client.contribute(&member3, &group_id);
+    client.execute_payout(&group_id);
+    
+    // Get status in cycle 3
+    let status = client.get_group_status(&group_id).unwrap();
+    
+    // Should be at cycle 3
+    assert_eq!(status.current_cycle, 3);
+    
+    // Next recipient should be member3 (payout_index = 2)
+    assert_eq!(status.next_recipient, member3);
+    
+    // All members should be pending contributions for cycle 3
+    assert_eq!(status.contributions_pending.len(), 3);
+}
+
+#[test]
+fn test_get_group_status_last_cycle_partial() {
+    let (env, client, creator, member2, member3) = setup_test_env();
+    
+    // Create and populate group
+    let group_id = client.create_group(&creator, &100_000_000i128, &604_800u64, &3u32);
+    client.join_group(&member2, &group_id);
+    client.join_group(&member3, &group_id);
+    
+    // Cycle 1: Creator receives payout
+    client.contribute(&creator, &group_id);
+    client.contribute(&member2, &group_id);
+    client.contribute(&member3, &group_id);
+    client.execute_payout(&group_id);
+    
+    // Cycle 2: Member2 receives payout
+    client.contribute(&creator, &group_id);
+    client.contribute(&member2, &group_id);
+    client.contribute(&member3, &group_id);
+    client.execute_payout(&group_id);
+    
+    // Cycle 3: Last cycle - member3 receives payout
+    client.contribute(&creator, &group_id);
+    // Only partial contributions in the last cycle
+    
+    // Get status with partial contributions in final cycle
+    let status = client.get_group_status(&group_id).unwrap();
+    
+    // Should be at cycle 3
+    assert_eq!(status.current_cycle, 3);
+    
+    // Next recipient should be member3 (payout_index = 2)
+    assert_eq!(status.next_recipient, member3);
+    
+    // member2 and member3 should be pending
+    assert_eq!(status.contributions_pending.len(), 2);
+}
+
+#[test]
+fn test_get_group_status_completed() {
+    let (env, client, creator, member2, member3) = setup_test_env();
+    
+    // Create and populate group
+    let group_id = client.create_group(&creator, &100_000_000i128, &604_800u64, &3u32);
+    client.join_group(&member2, &group_id);
+    client.join_group(&member3, &group_id);
+    
+    // Complete all cycles
+    for _ in 0..3 {
+        client.contribute(&creator, &group_id);
+        client.contribute(&member2, &group_id);
+        client.contribute(&member3, &group_id);
+        client.execute_payout(&group_id);
+    }
+    
+    // Get status of completed group
+    let status = client.get_group_status(&group_id).unwrap();
+    
+    // Should be at cycle 3 (the last cycle completed)
+    assert_eq!(status.current_cycle, 3);
+    
+    // contributions_pending should be empty for completed group
+    assert_eq!(status.contributions_pending.len(), 0);
+}
+
+#[test]
+fn test_get_group_status_invalid_group() {
+    let (env, client, _, _, _) = setup_test_env();
+    
+    // Try to get status of non-existent group
+    let result = client.get_group_status(&999u64);
+    
+    // Should return error
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_get_group_status_tracks_contributions() {
+    let (env, client, creator, member2, member3) = setup_test_env();
+    
+    // Create group
+    let group_id = client.create_group(&creator, &100_000_000i128, &604_800u64, &3u32);
+    client.join_group(&member2, &group_id);
+    client.join_group(&member3, &group_id);
+    
+    // Check status with no contributions
+    let status = client.get_group_status(&group_id).unwrap();
+    assert_eq!(status.contributions_pending.len(), 3);
+    
+    // Creator contributes
+    client.contribute(&creator, &group_id);
+    let status = client.get_group_status(&group_id).unwrap();
+    assert_eq!(status.contributions_pending.len(), 2);
+    
+    // Member2 contributes
+    client.contribute(&member2, &group_id);
+    let status = client.get_group_status(&group_id).unwrap();
+    assert_eq!(status.contributions_pending.len(), 1);
+    assert_eq!(status.contributions_pending.get(0), member3);
+    
+    // Member3 contributes
+    client.contribute(&member3, &group_id);
+    let status = client.get_group_status(&group_id).unwrap();
+    assert_eq!(status.contributions_pending.len(), 0);
+}

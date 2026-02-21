@@ -59,3 +59,16 @@ pub struct PayoutRecord {
     pub amount: i128,
     pub timestamp: u64,
 }
+/// Comprehensive status information for a group
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct GroupStatus {
+    /// Current cycle number
+    pub current_cycle: u32,
+    
+    /// Address of the member who will receive the next payout
+    pub next_recipient: Address,
+    
+    /// List of members who still need to contribute for the current cycle
+    pub contributions_pending: Vec<Address>,
+}

@@ -3,7 +3,7 @@ use soroban_sdk::{contract, contractimpl, Address, Env, Vec};
 use crate::errors::AjoError;
 use crate::events;
 use crate::storage;
-use crate::types::Group;
+use crate::types::{Group, GroupStatus};
 use crate::utils;
 
 /// The main Ajo contract
@@ -329,5 +329,62 @@ impl AjoContract {
     pub fn is_complete(env: Env, group_id: u64) -> Result<bool, AjoError> {
         let group = storage::get_group(&env, group_id).ok_or(AjoError::GroupNotFound)?;
         Ok(group.is_complete)
+    }
+    
+    /// Get comprehensive status information about a group
+    ///
+    /// Returns the current cycle, the next recipient, and a list of members
+    /// who still need to contribute for the current cycle.
+    ///
+    /// # Arguments
+    /// * `group_id` - The unique group identifier
+    ///
+    /// # Returns
+    /// GroupStatus containing:
+    /// - current_cycle: Current cycle number
+    /// - next_recipient: Address of member who will receive next payout
+    /// - contributions_pending: Vector of members who haven't contributed yet
+    ///
+    /// # Errors
+    /// * `GroupNotFound` - If the group does not exist
+    /// * `NoMembers` - If the group has no members (should never happen)
+    /// * `GroupComplete` - If the group has completed all cycles
+    pub fn get_group_status(env: Env, group_id: u64) -> Result<GroupStatus, AjoError> {
+        // Get group
+        let group = storage::get_group(&env, group_id).ok_or(AjoError::GroupNotFound)?;
+        
+        // If group is complete, return status with no pending contributions
+        if group.is_complete {
+            let next_recipient = group
+                .members
+                .get(group.payout_index)
+                .ok_or(AjoError::NoMembers)?;
+            
+            return Ok(GroupStatus {
+                current_cycle: group.current_cycle,
+                next_recipient,
+                contributions_pending: Vec::new(&env),
+            });
+        }
+        
+        // Get the next recipient
+        let next_recipient = group
+            .members
+            .get(group.payout_index)
+            .ok_or(AjoError::NoMembers)?;
+        
+        // Identify members who haven't contributed yet for the current cycle
+        let mut pending = Vec::new(&env);
+        for member in group.members.iter() {
+            if !storage::has_contributed(&env, group_id, group.current_cycle, &member) {
+                pending.push_back(member);
+            }
+        }
+        
+        Ok(GroupStatus {
+            current_cycle: group.current_cycle,
+            next_recipient,
+            contributions_pending: pending,
+        })
     }
 }
