@@ -29,4 +29,4 @@ We implement a **Unified Wallet Adapter**. Instead of components calling `Freigh
 ## 5. Data Synchronization
 Since blockchain data is asynchronous, we utilize **TanStack Query** to manage the "Closed Ledger" state. 
 - **Reads:** Cached for 60 seconds unless a transaction is detected.
-- **Writes:** Use `optimistic updates` to show the user immediate feedback while the transaction is pending in the Stellar network.
+- **Writes:** Use `optimistic updates` to show the user immediate feedback while the transaction is pending in the Stellar network. 

@@ -16,7 +16,7 @@ interface MemberListProps {
   groupId: string
 }
 
-export const MemberList: React.FC<MemberListProps> = ({ members, groupId }) => {
+export const MemberList: React.FC<MemberListProps> = ({ members, groupId: _groupId }) => {
   // TODO: Fetch members from smart contract
   // TODO: Display real member data with avatars
   // TODO: Add ability to remove members (creator only)
@@ -33,7 +33,7 @@ export const MemberList: React.FC<MemberListProps> = ({ members, groupId }) => {
   const displayMembers = members.length > 0 ? members : mockMembers
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
+      <div className="bg-white rounded-lg shadow p-6" data-group-id={groupId}>
       <h3 className="text-2xl font-bold mb-4">Group Members ({displayMembers.length})</h3>
 
       <div className="overflow-x-auto">

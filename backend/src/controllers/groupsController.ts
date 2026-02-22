@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express'
 import { SorobanService } from '../services/sorobanService'
+import { CreateGroupInput, JoinGroupInput, ContributeInput } from '../validators/groups'
 
 const sorobanService = new SorobanService()
 
@@ -41,16 +42,17 @@ export class GroupsController {
     }
   }
 
-  async getGroup(req: Request, res: Response, next: NextFunction) {
+  async getGroup(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { id } = req.params
       const group = await sorobanService.getGroup(id)
 
       if (!group) {
-        return res.status(404).json({
+        res.status(404).json({
           success: false,
           error: 'Group not found',
         })
+        return
       }
 
       res.json({ success: true, data: group })
@@ -59,33 +61,57 @@ export class GroupsController {
     }
   }
 
+  /**
+   * POST /api/groups
+   *
+   * Phase 1 — no signedXdr in body → returns { unsignedXdr } for the wallet to sign.
+   * Phase 2 — signedXdr present    → submits, returns { groupId, txHash }.
+   */
   async createGroup(req: Request, res: Response, next: NextFunction) {
     try {
-      const groupData = req.body
-      // TODO: Validate with Zod schema
+      const groupData: CreateGroupInput = req.body
       const result = await sorobanService.createGroup(groupData)
+
+      // Phase 1: return XDR for client signing
+      if (result.unsignedXdr) {
+        return res.status(200).json({ success: true, data: result })
+      }
+
+      // Phase 2: confirmed on-chain
       res.status(201).json({ success: true, data: result })
     } catch (error) {
       next(error)
     }
   }
 
+  /**
+   * POST /api/groups/:id/join
+   *
+   * Phase 1 — no signedXdr → returns { unsignedXdr }.
+   * Phase 2 — signedXdr present → submits, returns { success, txHash }.
+   */
   async joinGroup(req: Request, res: Response, next: NextFunction) {
     try {
       const { id } = req.params
-      const { publicKey } = req.body
-      const result = await sorobanService.joinGroup(id, publicKey)
+      const { publicKey, signedXdr }: JoinGroupInput = req.body
+      const result = await sorobanService.joinGroup(id, publicKey, signedXdr)
       res.json({ success: true, data: result })
     } catch (error) {
       next(error)
     }
   }
 
+  /**
+   * POST /api/groups/:id/contribute
+   *
+   * Phase 1 — no signedXdr → returns { unsignedXdr }.
+   * Phase 2 — signedXdr present → submits, returns { success, txHash }.
+   */ 
   async contribute(req: Request, res: Response, next: NextFunction) {
     try {
       const { id } = req.params
-      const { amount, publicKey } = req.body
-      const result = await sorobanService.contribute(id, publicKey, amount)
+      const { amount, publicKey, signedXdr }: ContributeInput = req.body
+      const result = await sorobanService.contribute(id, publicKey, amount, signedXdr)
       res.json({ success: true, data: result })
     } catch (error) {
       next(error)

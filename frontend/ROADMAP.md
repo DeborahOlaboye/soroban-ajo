@@ -1,6 +1,7 @@
 # Soroban-Ajo Frontend Roadmap
 
 ## Milestone 1: Core Foundation (In Progress)
+- [x] Establish Layered Service Architecture.
 - [ ] Implement Unified Wallet Provider (Freighter/Albedo).
 - [ ] Setup Global Error Boundary and Transaction Toast system.
 - [ ] Define shared TypeScript interfaces for Smart Contract return types.
