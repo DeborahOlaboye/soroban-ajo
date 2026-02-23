@@ -52,9 +52,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <Providers>
-          <AppLayout>{children}</AppLayout>
-        </Providers>
+        <div className="pattern-overlay gradient-mesh min-h-screen">
+          <Providers>
+            <AppLayout>{children}</AppLayout>
+          </Providers>
+        </div>
       </body>
     </html>
   )
