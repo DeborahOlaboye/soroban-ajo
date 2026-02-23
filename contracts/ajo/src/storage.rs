@@ -38,11 +38,11 @@ impl StorageKey {
     /// in a tuple at the storage call site; this method returns only the symbol portion.
     ///
     /// # Arguments
-    /// * `env` - The contract environment (needed for symbol creation)
+    /// * `_env` - The contract environment (reserved for future use)
     ///
     /// # Returns
     /// The [`Symbol`] corresponding to this key variant's prefix
-    pub fn to_symbol(&self, env: &Env) -> Symbol {
+    pub fn to_symbol(&self, _env: &Env) -> Symbol {
         match self {
             StorageKey::Admin => symbol_short!("ADMIN"),
             StorageKey::GroupCounter => symbol_short!("GCOUNTER"),
