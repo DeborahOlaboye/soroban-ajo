@@ -2,6 +2,7 @@ use soroban_sdk::{contract, contractimpl, Address, BytesN, Env, Vec};
 
 use crate::errors::AjoError;
 use crate::events;
+use crate::pausable;
 use crate::storage;
 use crate::types::{Group, GroupStatus};
 use crate::utils;
@@ -55,6 +56,59 @@ impl AjoContract {
         Ok(())
     }
 
+    /// Pause the contract to prevent state-mutating operations.
+    ///
+    /// This emergency function allows the admin to temporarily halt all state-mutating
+    /// operations (create_group, join_group, contribute, execute_payout) while keeping
+    /// query functions and admin functions operational. This is useful during security
+    /// incidents, detected vulnerabilities, or maintenance periods.
+    ///
+    /// When paused:
+    /// - All state-mutating operations will fail with `ContractPaused` error
+    /// - Query operations continue to work normally
+    /// - Admin operations (pause, unpause, upgrade) remain available
+    /// - All stored data (groups, contributions, payouts) remains safe and intact
+    ///
+    /// # Arguments
+    /// * `env` - The Soroban contract environment
+    ///
+    /// # Returns
+    /// `Ok(())` on successful pause
+    ///
+    /// # Errors
+    /// * `UnauthorizedPause` - If the caller is not the admin
+    ///
+    /// # Authorization
+    /// Only the contract admin can call this function.
+    pub fn pause(env: Env) -> Result<(), AjoError> {
+        pausable::pause(&env)
+    }
+
+    /// Unpause the contract to restore normal operations.
+    ///
+    /// This function allows the admin to restore full contract functionality after
+    /// an emergency pause. Once unpaused, all state-mutating operations return to
+    /// normal operation. All data remains intact and accessible.
+    ///
+    /// # Arguments
+    /// * `env` - The Soroban contract environment
+    ///
+    /// # Returns
+    /// `Ok(())` on successful unpause
+    ///
+    /// # Errors
+    /// * `UnauthorizedUnpause` - If the caller is not the admin
+    ///
+    /// # Authorization
+    /// Only the contract admin can call this function.
+    ///
+    /// # Data Safety
+    /// Unpausing does not modify any stored data. All groups, contributions, and
+    /// payouts remain exactly as they were before the pause.
+    pub fn unpause(env: Env) -> Result<(), AjoError> {
+        pausable::unpause(&env)
+    }
+
     /// Create a new Ajo group.
     ///
     /// Initializes a new rotating savings group with the specified parameters.
@@ -86,6 +140,9 @@ impl AjoContract {
     ) -> Result<u64, AjoError> {
         // Validate parameters
         utils::validate_group_params(contribution_amount, cycle_duration, max_members)?;
+
+        // Check if paused
+        pausable::ensure_not_paused(&env)?;
 
         // Require authentication
         creator.require_auth();
@@ -181,6 +238,9 @@ impl AjoContract {
     /// * `AlreadyMember` - If the address is already a member
     /// * `GroupComplete` - If the group has completed all cycles
     pub fn join_group(env: Env, member: Address, group_id: u64) -> Result<(), AjoError> {
+        // Check if paused
+        pausable::ensure_not_paused(&env)?;
+
         // Require authentication
         member.require_auth();
 
@@ -253,6 +313,9 @@ impl AjoContract {
     /// * `AlreadyContributed` - If already contributed this cycle
     /// * `GroupComplete` - If the group has completed all cycles
     pub fn contribute(env: Env, member: Address, group_id: u64) -> Result<(), AjoError> {
+        // Check if paused
+        pausable::ensure_not_paused(&env)?;
+
         // Require authentication
         member.require_auth();
 
@@ -349,6 +412,9 @@ impl AjoContract {
     /// * `GroupComplete` - If the group has already completed all payouts
     /// * `NoMembers` - If the group has no members (should never happen)
     pub fn execute_payout(env: Env, group_id: u64) -> Result<(), AjoError> {
+        // Check if paused
+        pausable::ensure_not_paused(&env)?;
+
         // Get group
         let mut group = storage::get_group(&env, group_id).ok_or(AjoError::GroupNotFound)?;
 

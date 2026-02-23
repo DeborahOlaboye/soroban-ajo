@@ -14,6 +14,7 @@
 mod contract;
 mod errors;
 mod events;
+mod pausable;
 mod storage;
 mod types;
 mod utils;
