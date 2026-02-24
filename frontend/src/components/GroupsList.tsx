@@ -1,13 +1,9 @@
-import { SortDirection, SortField } from '@/hooks/useDashboard'
 import { Group } from '@/types'
 import React from 'react'
 
 interface GroupsListProps {
   groups?: Group[]
   isLoading?: boolean
-  sortField?: SortField
-  sortDirection?: SortDirection
-  onSort?: (field: SortField) => void
   onGroupClick?: (groupId: string) => void
   onJoinGroup?: (groupId: string) => void
 }
@@ -15,17 +11,10 @@ interface GroupsListProps {
 export const GroupsList: React.FC<GroupsListProps> = ({
   groups = [],
   isLoading = false,
-  sortField = 'name',
-  sortDirection = 'asc',
-  onSort = () => { },
   onGroupClick,
   onJoinGroup,
 }) => {
-  const list = groups
-  const SortIcon = ({ field }: { field: SortField }) => {
-    if (sortField !== field) return <span className="sort-indicator-inactive">↕</span>
-    return <span className="sort-indicator-active">{sortDirection === 'asc' ? '↑' : '↓'}</span>
-  }
+  const list = groups;
 
   const statusConfig: Record<string, { badge: string; dot: string; label: string }> = {
     active: {
@@ -106,27 +95,27 @@ export const GroupsList: React.FC<GroupsListProps> = ({
         <thead>
           <tr>
             <th>
-              <div className="sort-header" onClick={() => onSort('name')}>
-                Name <SortIcon field="name" />
+              <div className="px-5 py-3.5 text-left text-xs font-semibold text-surface-500 uppercase tracking-wider">
+                Name
               </div>
             </th>
             <th>
-              <div className="sort-header" onClick={() => onSort('members')}>
-                Members <SortIcon field="members" />
+              <div className="px-5 py-3.5 text-left text-xs font-semibold text-surface-500 uppercase tracking-wider">
+                Members
               </div>
             </th>
             <th>
-              <div className="sort-header" onClick={() => onSort('contributions')}>
-                Contributions <SortIcon field="contributions" />
+              <div className="px-5 py-3.5 text-left text-xs font-semibold text-surface-500 uppercase tracking-wider">
+                Contributions
               </div>
             </th>
             <th>
-              <div className="sort-header" onClick={() => onSort('nextPayout')}>
-                Next Payout <SortIcon field="nextPayout" />
+              <div className="px-5 py-3.5 text-left text-xs font-semibold text-surface-500 uppercase tracking-wider">
+                Next Payout
               </div>
             </th>
-            <th>Status</th>
-            <th>Actions</th>
+            <th><div className="px-5 py-3.5 text-left text-xs font-semibold text-surface-500 uppercase tracking-wider">Status</div></th>
+            <th><div className="px-5 py-3.5 text-left text-xs font-semibold text-surface-500 uppercase tracking-wider">Actions</div></th>
           </tr>
         </thead>
         <tbody>
@@ -176,7 +165,7 @@ export const GroupsList: React.FC<GroupsListProps> = ({
                 </td>
                 <td className="whitespace-nowrap">
                   <button
-                    onClick={(e) => {
+                    onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
                       e.stopPropagation()
                       onJoinGroup?.(group.id)
                     }}

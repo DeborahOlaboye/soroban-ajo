@@ -4,16 +4,15 @@ import { GroupsList } from '@/components/GroupsList'
 import { GroupCreationForm } from '@/components/GroupCreationForm'
 import { useDashboard } from '@/hooks/useDashboard'
 import { useState } from 'react'
+import { SearchBar } from '@/components/SearchBar'
+import { FilterPanel } from '@/components/FilterPanel'
+import { useGroupFilters } from '@/hooks/useGroupFilters'
 
 export default function GroupsPage() {
   const [showCreateForm, setShowCreateForm] = useState(false)
-  const { 
-    groups, 
-    isLoading, 
-    sortField, 
-    sortDirection, 
-    toggleSort 
-  } = useDashboard()
+  const { groups: rawGroups, isLoading } = useDashboard()
+
+  const { filters, updateFilter, clearFilters, filteredAndSortedGroups } = useGroupFilters(rawGroups);
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -48,13 +47,35 @@ export default function GroupsPage() {
         {showCreateForm ? (
           <GroupCreationForm onSuccess={() => setShowCreateForm(false)} />
         ) : (
-          <GroupsList 
-            groups={groups}
-            isLoading={isLoading}
-            sortField={sortField}
-            sortDirection={sortDirection}
-            onSort={toggleSort}
-          />
+          <div className="space-y-4">
+            <div className="flex flex-col gap-4 mb-4">
+              <SearchBar
+                value={filters.searchQuery}
+                onChange={(val) => updateFilter('searchQuery', val)}
+              />
+              <FilterPanel
+                filters={filters}
+                updateFilter={updateFilter}
+                clearFilters={clearFilters}
+              />
+            </div>
+            {filteredAndSortedGroups.length === 0 && !isLoading ? (
+              <div className="text-center py-12 bg-white rounded-xl shadow-sm border border-gray-100">
+                <p className="text-gray-500">No groups found matching your criteria.</p>
+                <button
+                  onClick={clearFilters}
+                  className="mt-4 text-blue-600 hover:underline"
+                >
+                  Clear all filters
+                </button>
+              </div>
+            ) : (
+              <GroupsList
+                groups={filteredAndSortedGroups}
+                isLoading={isLoading}
+              />
+            )}
+          </div>
         )}
       </div>
     </div>

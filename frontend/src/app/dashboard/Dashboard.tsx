@@ -178,11 +178,8 @@ export default function Dashboard() {
             />
           ) : (
             <GroupsList
-              groups={groups ?? []}
+              groups={groups}
               isLoading={isLoading}
-              sortField={sortField}
-              sortDirection={sortDirection}
-              onSort={toggleSort}
               onGroupClick={handleGroupClick}
               onJoinGroup={handleJoinGroup}
             />
