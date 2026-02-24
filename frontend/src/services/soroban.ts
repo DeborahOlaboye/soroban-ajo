@@ -542,13 +542,106 @@ export const initializeSoroban = (): SorobanService => {
             async () => {
               return await withRetry(
                 async () => {
+                  // Mock data for test environment
+                  if (isTestEnvironment || !CONTRACT_ID) {
+                    await new Promise(resolve => setTimeout(resolve, 300))
+                    return {
+                      groupId,
+                      currentCycle: 2,
+                      nextRecipient: 'GDEF456GHIJKLMNOPQRSTUVWXYZ789012ABCDEFGHIJKLMNOPQR',
+                      pendingContributions: 1,
+                      totalCollected: 150,
+                      daysUntilPayout: 5,
+                    }
+                  }
 
+                  // Real blockchain query
+                  if (!(await isConnected())) {
+                    throw new Error('Freighter wallet is not installed.')
+                  }
+                  if (!(await isAllowed())) {
+                    await setAllowed()
+                  }
+
+                  const accessResult = await requestAccess()
+                  if (accessResult.error || !accessResult.address) {
+                    const error: any = new Error(accessResult.error || 'User public key not available.')
+                    error.code = 'UNAUTHORIZED'
+                    throw error
+                  }
+
+                  const sourceAccount = await server.getAccount(accessResult.address)
+                  const contract = new SorobanClient.Contract(CONTRACT_ID)
+
+                  // Call get_group_status from the contract
+                  const statusTx = new SorobanClient.TransactionBuilder(sourceAccount, {
+                    fee: '100',
+                    networkPassphrase: NETWORK_PASSPHRASE,
+                  })
+                    .addOperation(
+                      contract.call(
+                        'get_group_status',
+                        SorobanClient.xdr.ScVal.scvU64(new SorobanClient.xdr.Uint64(parseInt(groupId)))
+                      )
+                    )
+                    .setTimeout(30)
+                    .build()
+
+                  const statusSim = await server.simulateTransaction(statusTx)
+
+                  if (!SorobanClient.SorobanRpc.Api.isSimulationSuccess(statusSim)) {
+                    throw new Error('Failed to fetch group status from contract')
+                  }
+
+                  // Parse the GroupStatus struct from contract
+                  const rawStatus = SorobanClient.scValToNative(statusSim.result!.retval)
+
+                  // Also fetch the group details for additional context
+                  const groupTx = new SorobanClient.TransactionBuilder(sourceAccount, {
+                    fee: '100',
+                    networkPassphrase: NETWORK_PASSPHRASE,
+                  })
+                    .addOperation(
+                      contract.call(
+                        'get_group',
+                        SorobanClient.xdr.ScVal.scvU64(new SorobanClient.xdr.Uint64(parseInt(groupId)))
+                      )
+                    )
+                    .setTimeout(30)
+                    .build()
+
+                  const groupSim = await server.simulateTransaction(groupTx)
+
+                  if (!SorobanClient.SorobanRpc.Api.isSimulationSuccess(groupSim)) {
+                    throw new Error('Failed to fetch group details from contract')
+                  }
+
+                  const groupData = SorobanClient.scValToNative(groupSim.result!.retval)
+
+                  // Calculate days until payout based on cycle timing
+                  const currentTime = Number(rawStatus.current_time)
+                  const cycleEndTime = Number(rawStatus.cycle_end_time)
+                  const secondsUntilPayout = Math.max(0, cycleEndTime - currentTime)
+                  const daysUntilPayout = Math.ceil(secondsUntilPayout / 86400)
+
+                  // Calculate total collected in current cycle
+                  const contributionAmount = Number(groupData.contribution_amount) / 10_000_000 // stroops to XLM
+                  const contributionsReceived = Number(rawStatus.contributions_received)
+                  const totalCollected = contributionAmount * contributionsReceived
+
+                  // Determine pending contributions count
+                  const pendingContributions = Number(rawStatus.total_members) - contributionsReceived
+
+                  // Map to frontend GroupStatus type
                   return {
                     groupId,
-                    status: 'active',
-                    currentCycle: 1,
-                    totalContributions: 0,
-                    // ... other status fields
+                    currentCycle: Number(rawStatus.current_cycle),
+                    nextRecipient: rawStatus.has_next_recipient 
+                      ? String(rawStatus.next_recipient) 
+                      : 'N/A',
+                    pendingContributions,
+                    totalCollected,
+                    daysUntilPayout,
                   }
                 },
                 'getGroupStatus'
