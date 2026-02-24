@@ -165,22 +165,6 @@ pub fn mark_payout_received(env: &Env, group_id: u64, member: &Address) {
     env.storage().persistent().set(&key, &true);
 }
 
-/// Returns `true` if the given member has already received a payout for this group.
-///
-/// Defaults to `false` if no record exists, meaning the member has not yet received a payout.
-///
-/// # Arguments
-/// * `env` - The contract environment used to access persistent storage
-/// * `group_id` - The group to check
-/// * `member` - The member address to check
-///
-/// # Returns
-/// `true` if the member has received a payout, `false` otherwise
-pub fn has_received_payout(env: &Env, group_id: u64, member: &Address) -> bool {
-    let key = (symbol_short!("PAYOUT"), group_id, member);
-    env.storage().persistent().get(&key).unwrap_or(false)
-}
-
 /// Returns contribution status for every member in a cycle as an ordered vector.
 ///
 /// Iterates through `members` in order and looks up each one's contribution
@@ -202,6 +186,7 @@ pub fn get_cycle_contributions(
     members: &Vec<Address>,
 ) -> Vec<(Address, bool)> {
     let mut results = Vec::new(env);
+    
     for member in members.iter() {
         let paid = has_contributed(env, group_id, cycle, &member);
         results.push_back((member, paid));

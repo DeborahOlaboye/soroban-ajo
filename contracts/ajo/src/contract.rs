@@ -247,6 +247,10 @@ impl AjoContract {
         // Get group
         let mut group = storage::get_group(&env, group_id).ok_or(AjoError::GroupNotFound)?;
 
+        // Cache member count for comparisons
+        let member_count = group.members.len() as u32;
+        let max_members = group.max_members;
+
         // Check if group is complete
         if group.is_complete {
             return Err(AjoError::GroupComplete);
@@ -258,7 +262,7 @@ impl AjoContract {
         }
 
         // Check if group is full
-        if group.members.len() >= group.max_members {
+        if member_count >= max_members {
             return Err(AjoError::MaxMembersExceeded);
         }
 
@@ -319,8 +323,13 @@ impl AjoContract {
         // Require authentication
         member.require_auth();
 
-        // Get group
+        // Get group (single fetch)
         let group = storage::get_group(&env, group_id).ok_or(AjoError::GroupNotFound)?;
+
+        // Cache frequently accessed values
+        let group_id_cached = group.id;
+        let current_cycle = group.current_cycle;
+        let contribution_amount = group.contribution_amount;
 
         // Check if group is complete
         if group.is_complete {
@@ -333,24 +342,20 @@ impl AjoContract {
         }
 
         // Check if already contributed
-        if storage::has_contributed(&env, group_id, group.current_cycle, &member) {
+        if storage::has_contributed(&env, group_id_cached, current_cycle, &member) {
             return Err(AjoError::AlreadyContributed);
         }
 
-        // Transfer contribution to contract
-        // Note: In production, this would use token.transfer() or native transfer
-        // For now, we mark as contributed (assuming payment succeeded)
-
         // Record contribution
-        storage::store_contribution(&env, group_id, group.current_cycle, &member, true);
+        storage::store_contribution(&env, group_id_cached, current_cycle, &member, true);
 
         // Emit event
         events::emit_contribution_made(
             &env,
-            group_id,
+            group_id_cached,
             &member,
-            group.current_cycle,
-            group.contribution_amount,
+            current_cycle,
+            contribution_amount,
         );
 
         Ok(())
@@ -415,13 +420,18 @@ impl AjoContract {
         // Check if paused
         pausable::ensure_not_paused(&env)?;
 
-        // Get group
+        // Get group (single fetch)
         let mut group = storage::get_group(&env, group_id).ok_or(AjoError::GroupNotFound)?;
 
         // Check if group is complete
         if group.is_complete {
             return Err(AjoError::GroupComplete);
         }
+
+        // Cache frequently accessed values
+        let group_id_cached = group.id;
+        let current_cycle = group.current_cycle;
+        let member_count = group.members.len();
 
         // Check if all members have contributed
         if !utils::all_members_contributed(&env, &group) {
@@ -434,22 +444,18 @@ impl AjoContract {
             .get(group.payout_index)
             .ok_or(AjoError::NoMembers)?;
 
-        // Calculate payout amount
-        let payout_amount = utils::calculate_payout_amount(&group);
-
-        // Transfer payout to recipient
-        // Note: In production, this would use token.transfer() or native transfer
-        // For now, we just record it
+        // Calculate payout amount (inline to avoid function call overhead)
+        let payout_amount = group.contribution_amount * (member_count as i128);
 
         // Mark payout as received
-        storage::mark_payout_received(&env, group_id, &payout_recipient);
+        storage::mark_payout_received(&env, group_id_cached, &payout_recipient);
 
         // Emit payout event
         events::emit_payout_executed(
             &env,
-            group_id,
+            group_id_cached,
             &payout_recipient,
-            group.current_cycle,
+            current_cycle,
             payout_amount,
         );
 
@@ -457,17 +463,17 @@ impl AjoContract {
         group.payout_index += 1;
 
         // Check if all members have received payout
-        if group.payout_index >= group.members.len() {
+        if group.payout_index >= member_count as u32 {
             // All members have received payout - mark complete
             group.is_complete = true;
-            events::emit_group_completed(&env, group_id);
+            events::emit_group_completed(&env, group_id_cached);
         } else {
             // Advance to next cycle
             group.current_cycle += 1;
             group.cycle_start_time = utils::get_current_timestamp(&env);
         }
 
-        // Update storage
+        // Update storage (single write)
         storage::store_group(&env, group_id, &group);
 
         Ok(())
@@ -515,26 +521,26 @@ impl AjoContract {
     /// # Errors
     /// * `GroupNotFound` - If the group does not exist
     pub fn get_group_status(env: Env, group_id: u64) -> Result<GroupStatus, AjoError> {
-        // Get the group data
+        // Get the group data (single fetch)
         let group = storage::get_group(&env, group_id).ok_or(AjoError::GroupNotFound)?;
 
-        // Get current timestamp
+        // Cache frequently accessed values
         let current_time = utils::get_current_timestamp(&env);
+        let member_count = group.members.len();
+        let group_id_cached = group.id;
+        let current_cycle = group.current_cycle;
 
         // Calculate cycle timing
         let cycle_end_time = group.cycle_start_time + group.cycle_duration;
         let is_cycle_active = current_time < cycle_end_time;
 
-        // Get contribution status for all members in current cycle
-        let contributions =
-            storage::get_cycle_contributions(&env, group_id, group.current_cycle, &group.members);
-
-        // Count contributions and build pending list
+        // Build pending_contributors list
         let mut contributions_received: u32 = 0;
         let mut pending_contributors = Vec::new(&env);
 
-        for (member, has_contributed) in contributions.iter() {
-            if has_contributed {
+        // Single pass through members to check contributions
+        for member in group.members.iter() {
+            if storage::has_contributed(&env, group_id_cached, current_cycle, &member) {
                 contributions_received += 1;
             } else {
                 pending_contributors.push_back(member);

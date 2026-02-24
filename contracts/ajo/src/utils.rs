@@ -13,13 +13,9 @@ use crate::types::Group;
 ///
 /// # Returns
 /// `true` if the address is found in the members list, `false` otherwise
+#[inline]
 pub fn is_member(members: &Vec<Address>, address: &Address) -> bool {
-    for member in members.iter() {
-        if member == *address {
-            return true;
-        }
-    }
-    false
+    members.iter().any(|m| m == *address)
 }
 
 /// Returns `true` if every member of the group has contributed in the current cycle.
@@ -34,13 +30,14 @@ pub fn is_member(members: &Vec<Address>, address: &Address) -> bool {
 ///
 /// # Returns
 /// `true` if all members have contributed, `false` otherwise
+#[inline]
 pub fn all_members_contributed(env: &Env, group: &Group) -> bool {
-    for member in group.members.iter() {
-        if !crate::storage::has_contributed(env, group.id, group.current_cycle, &member) {
-            return false;
-        }
-    }
-    true
+    let group_id = group.id;
+    let cycle = group.current_cycle;
+    
+    group.members.iter().all(|member| {
+        crate::storage::has_contributed(env, group_id, cycle, &member)
+    })
 }
 
 /// Calculates the total payout amount for a single cycle.
@@ -53,6 +50,7 @@ pub fn all_members_contributed(env: &Env, group: &Group) -> bool {
 ///
 /// # Returns
 /// Total payout in stroops (`contribution_amount × member_count`)
+#[inline]
 pub fn calculate_payout_amount(group: &Group) -> i128 {
     let member_count = group.members.len() as i128;
     group.contribution_amount * member_count
@@ -68,6 +66,7 @@ pub fn calculate_payout_amount(group: &Group) -> i128 {
 ///
 /// # Returns
 /// Current Unix timestamp in seconds
+#[inline]
 pub fn get_current_timestamp(env: &Env) -> u64 {
     env.ledger().timestamp()
 }
@@ -130,38 +129,4 @@ pub fn validate_group_params(
     }
 
     Ok(())
-}
-
-/// Returns the start and end timestamps for the group's current cycle window.
-///
-/// The cycle window is `[cycle_start_time, cycle_start_time + cycle_duration)`.
-/// This is a pure calculation that does not read the ledger clock.
-///
-/// # Arguments
-/// * `group` - The group whose cycle window is being computed
-/// * `_current_time` - Reserved for future use (e.g., dynamic window adjustment)
-///
-/// # Returns
-/// A `(start, end)` tuple of Unix timestamps in seconds
-pub fn get_cycle_window(group: &Group, _current_time: u64) -> (u64, u64) {
-    let cycle_start = group.cycle_start_time;
-    let cycle_end = cycle_start + group.cycle_duration;
-    (cycle_start, cycle_end)
-}
-
-/// Returns `true` if `current_time` falls within the group's active cycle window.
-///
-/// The window is inclusive of `cycle_start_time` and exclusive of `cycle_end_time`
-/// (`start <= current_time < end`). Once this returns `false`, the cycle has expired
-/// and a payout can be triggered.
-///
-/// # Arguments
-/// * `group` - The group whose cycle window is being checked
-/// * `current_time` - The timestamp to evaluate, typically from [`get_current_timestamp`]
-///
-/// # Returns
-/// `true` if current_time is within the cycle window, `false` otherwise
-pub fn is_within_cycle_window(group: &Group, current_time: u64) -> bool {
-    let (cycle_start, cycle_end) = get_cycle_window(group, current_time);
-    current_time >= cycle_start && current_time < cycle_end
 }
