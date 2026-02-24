@@ -13,18 +13,22 @@
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "generate-sdk": "tsx scripts/generate-sdk.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.4.1",
     "@prisma/client": "^7.4.1",
     "@types/swagger-jsdoc": "^6.0.4",
     "@types/swagger-ui-express": "^4.1.8",
+    "bull": "^4.16.5",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
     "helmet": "^7.1.0",
+    "ioredis": "^5.9.3",
     "jsonwebtoken": "^9.0.3",
+    "mjml": "^4.18.0",
     "morgan": "^1.10.0",
     "pg": "^8.18.0",
     "prisma": "^7.4.1",
@@ -35,6 +39,7 @@
     "zod": "^3.22.4"
   },
   "devDependencies": {
+    "@types/bull": "^3.15.9",
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
     "@types/jsonwebtoken": "^9.0.10",

@@ -127,7 +127,7 @@ export function getErrorMessage(error: unknown): UserFriendlyError {
   return getDefaultError('unknown')
 }
 
-function getDefaultError(raw: string): UserFriendlyError {
+function getDefaultError(_raw: string): UserFriendlyError {
   return {
     title: 'Something Went Wrong',
     message: 'An unexpected error occurred. Please try again.',
