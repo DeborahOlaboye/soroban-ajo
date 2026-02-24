@@ -6,7 +6,7 @@ router.get('/', (req, res) => {
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
-    service: 'drips-backend',
+    service: 'ajo-backend',
     version: '0.1.0'
   })
 })

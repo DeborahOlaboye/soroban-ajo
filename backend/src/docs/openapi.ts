@@ -4,7 +4,7 @@ export const swaggerOptions: Options = {
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'Drips API - Decentralized Savings Groups',
+      title: 'Ajo API - Decentralized Savings Groups',
       version: '1.0.0',
       description: 'API for managing Ajo/ROSCA savings groups on Stellar/Soroban blockchain',
       contact: {

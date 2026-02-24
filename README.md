@@ -1,4 +1,4 @@
-# Drips - Decentralized Savings Groups
+# Ajo - Decentralized Savings Groups
 
 A blockchain-based savings group platform built on Stellar/Soroban, enabling communities to create and manage traditional "Ajo" or "Rotating Savings and Credit Associations" (ROSCAs) with full transparency and security.
 
@@ -137,14 +137,20 @@ This starts both frontend and backend concurrently.
 
 ## 📚 Documentation
 
+Comprehensive documentation is available in the [`documentation/`](documentation/) folder:
+
+- **[Documentation Index](documentation/README.md)** - Complete documentation guide
+- **[Project Structure](PROJECT_STRUCTURE.md)** - Detailed project structure
+- **[Architecture](documentation/architecture/architecture.md)** - System design
+- **[Guides](documentation/guides/)** - Step-by-step guides
+- **[Development](documentation/development/)** - Development workflows
+- **[API Documentation](http://localhost:3001/api-docs)** - Interactive Swagger UI (when backend is running)
+
+### Quick Links
 - [Frontend README](frontend/README.md) - Next.js setup and development
 - [Backend README](backend/README.md) - API server setup and endpoints
-- [Next.js Migration Guide](documentation/NEXTJS_MIGRATION.md) - Migration from Vite
-- [Migration Summary](documentation/MIGRATION_SUMMARY.md) - Recent migration details
-- [Monorepo Guide](documentation/MONOREPO_GUIDE.md) - Monorepo workflow
-- [Architecture](documentation/architecture.md) - System design
-- [Security](documentation/SECURITY.md) - Security considerations
-- [Contributing](CONTRIBUTING.md) - Contribution guidelines
+- [Contributing Guidelines](CONTRIBUTING.md) - How to contribute
+- [Refactoring Plan](documentation/development/REFACTORING_PLAN.md) - Code quality improvements
 
 ## 🛠 Technology Stack
 

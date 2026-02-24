@@ -1,7 +1,7 @@
 {
-  "name": "drips-backend",
+  "name": "ajo-backend",
   "version": "0.1.0",
-  "description": "Backend API for Drips - Decentralized Savings Groups",
+  "description": "Backend API for Ajo - Decentralized Savings Groups",
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",

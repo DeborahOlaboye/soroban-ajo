@@ -11,7 +11,7 @@ interface MobileMenuProps {
 }
 
 export const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose }) => {
-  const pathname = usePathname()
+  const pathname = usePathname() || ''
 
   if (!isOpen) return null
 
@@ -30,9 +30,8 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose }) => {
                   key={link.href}
                   href={link.href}
                   onClick={onClose}
-                  className={`px-3 py-2 rounded-md font-medium flex gap-2 items-center ${
-                    isActive ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'
-                  }`}
+                  className={`px-3 py-2 rounded-md font-medium flex gap-2 items-center ${isActive ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'
+                    }`}
                 >
                   {link.icon}
                   {link.label}

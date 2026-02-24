@@ -1,5 +1,5 @@
 {
-  "name": "drips-frontend",
+  "name": "ajo-frontend",
   "private": true,
   "version": "0.1.0",
   "scripts": {
@@ -10,20 +10,25 @@
     "type-check": "tsc --noEmit",
     "test": "jest",
     "test:watch": "jest --watch",
+    "test:pwa": "npm run build && npm start",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build"
   },
   "dependencies": {
+    "@stellar/freighter-api": "^6.0.1",
     "@tanstack/react-query": "^5.28.0",
     "axios": "^1.6.0",
     "clsx": "^2.0.0",
     "date-fns": "^2.30.0",
-    "next": "^14.1.0",
-    "next-themes": "^0.4.6",
+    "framer-motion": "^11.18.2",
     "lucide-react": "^0.575.0",
+    "next": "^14.1.0",
+    "next-intl": "^4.8.3",
+    "next-themes": "^0.4.6",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-hot-toast": "^2.4.1",
+    "react-joyride": "^2.9.3",
     "recharts": "^2.10.0",
     "stellar-sdk": "^12.0.0",
     "zustand": "^4.4.0"
@@ -37,7 +42,6 @@
     "@storybook/nextjs": "^8.4.0",
     "@storybook/react": "^8.4.0",
     "@storybook/test": "^8.4.0",
-    "storybook": "^8.4.0",
     "@testing-library/jest-dom": "^6.1.4",
     "@testing-library/react": "^14.0.0",
     "@types/jest": "^29.5.8",
@@ -52,17 +56,14 @@
     "identity-obj-proxy": "^3.0.0",
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",
+    "next-pwa": "^5.6.0",
     "postcss": "^8.4.32",
-<<<<<<< HEAD
-    "storybook": "^10.2.10",
+    "storybook": "^8.4.0",
+    "tailwindcss": "^3.3.0",
     "terser": "^5.46.0",
+    "ts-jest": "^29.1.1",
     "typescript": "^5.2.2",
     "vite": "^5.0.2",
     "vitest": "^0.34.6"
-=======
-    "tailwindcss": "^3.3.0",
-    "ts-jest": "^29.1.1",
-    "typescript": "^5.2.2"
->>>>>>> 545485e03a311afa4a93e0cb0b74ee75536f1544
   }
 }

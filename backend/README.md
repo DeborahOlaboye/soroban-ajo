@@ -1,6 +1,6 @@
-# Drips Backend API
+# Ajo Backend API
 
-Node.js/Express backend API for the Drips decentralized savings groups platform.
+Node.js/Express backend API for the Ajo decentralized savings groups platform.
 
 ## 🚀 Quick Start
 

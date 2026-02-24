@@ -6,11 +6,11 @@ const options: swaggerJsdoc.Options = {
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'Drips API',
+      title: 'Ajo API',
       version: '0.1.0',
-      description: 'Backend API for Drips - Decentralized Savings Groups on Stellar',
+      description: 'Backend API for Ajo - Decentralized Savings Groups on Stellar',
       contact: {
-        name: 'Drips Team',
+        name: 'Ajo Team',
         url: 'https://github.com/Christopherdominic/soroban-ajo',
       },
     },

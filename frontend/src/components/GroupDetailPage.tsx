@@ -1,30 +1,22 @@
 // Issue #27: Create group detail page with tabs
 // Complexity: Medium (150 pts)
-// Status: Placeholder
+// Status: Enhanced with real member data integration
 
 import React, { useState } from 'react'
 import { ContributionForm } from './ContributionForm'
-import { EmptyMemberState } from './EmptyMemberState'
 import { MemberList } from './MemberList'
 import { TransactionHistory } from './TransactionHistory'
 
 type TabKey = 'overview' | 'members' | 'history' | 'settings'
 
-interface Member {
-  id: string
-  address: string
-}
-
 interface GroupDetailPageProps {
   groupId: string
-  members?: Member[]
   onShareLink?: () => void
   onCopyLink?: () => void
 }
 
 export const GroupDetailPage: React.FC<GroupDetailPageProps> = ({
   groupId,
-  members = [],
   onShareLink,
   onCopyLink,
 }) => {
@@ -88,11 +80,10 @@ export const GroupDetailPage: React.FC<GroupDetailPageProps> = ({
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`py-4 px-2 border-b-2 font-semibold transition ${
-                  activeTab === tab
-                    ? 'border-blue-600 dark:border-indigo-400 text-blue-600 dark:text-indigo-400'
-                    : 'border-transparent text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-slate-100'
-                }`}
+                className={`py-4 px-2 border-b-2 font-semibold transition ${activeTab === tab
+                  ? 'border-blue-600 dark:border-indigo-400 text-blue-600 dark:text-indigo-400'
+                  : 'border-transparent text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-slate-100'
+                  }`}
               >
                 {tab.charAt(0).toUpperCase() + tab.slice(1)}
               </button>
@@ -112,7 +103,7 @@ export const GroupDetailPage: React.FC<GroupDetailPageProps> = ({
                     Feb 28, 2026
                   </p>
                 </div>
-                <TransactionHistory groupId={groupId} transactions={[]} />
+                <TransactionHistory groupId={groupId} />
               </div>
               <ContributionForm groupId={groupId} contributionAmount={500} />
             </div>
@@ -120,15 +111,12 @@ export const GroupDetailPage: React.FC<GroupDetailPageProps> = ({
 
           {activeTab === 'members' && (
             <>
-              {members.length === 0 ? (
-                <EmptyMemberState onShareLink={handleShareLink} onCopyLink={handleCopyLink} />
-              ) : (
-                <MemberList groupId={groupId} members={members} />
-              )}
+              {/* MemberList now fetches its own data via useGroupMembers hook */}
+              <MemberList groupId={groupId} />
             </>
           )}
 
-          {activeTab === 'history' && <TransactionHistory groupId={groupId} transactions={[]} />}
+          {activeTab === 'history' && <TransactionHistory groupId={groupId} />}
 
           {activeTab === 'settings' && (
             <div className="space-y-4">

@@ -1,34 +1,20 @@
-import { SortDirection, SortField } from '@/hooks/useDashboard'
 import { Group } from '@/types'
 import React from 'react'
 
 interface GroupsListProps {
   groups?: Group[]
   isLoading?: boolean
-  sortField?: SortField
-  sortDirection?: SortDirection
-  onSort?: (field: SortField) => void
-  sortField?: SortField
-  sortDirection?: SortDirection
-  onSort?: (field: SortField) => void
   onGroupClick?: (groupId: string) => void
   onJoinGroup?: (groupId: string) => void
 }
 
 export const GroupsList: React.FC<GroupsListProps> = ({
-  fetchGroups,
+  groups = [],
   isLoading = false,
-  sortField = 'name',
-  sortDirection = 'asc',
-  onSort = () => {},
   onGroupClick,
   onJoinGroup,
 }) => {
-  const list = groups ?? []
-  const SortIcon = ({ field }: { field: SortField }) => {
-    if (sortField !== field) return <span className="sort-indicator-inactive">↕</span>
-    return <span className="sort-indicator-active">{sortDirection === 'asc' ? '↑' : '↓'}</span>
-  }
+  const list = groups;
 
   const statusConfig: Record<string, { badge: string; dot: string; label: string }> = {
     active: {
@@ -48,7 +34,7 @@ export const GroupsList: React.FC<GroupsListProps> = ({
     },
   }
 
-  if (loading || isLoading) {
+  if (isLoading) {
     return (
       <div className="bg-white dark:bg-slate-800 rounded-2xl border border-surface-200/80 dark:border-slate-700 overflow-hidden">
         <table className="table-premium">
@@ -109,27 +95,27 @@ export const GroupsList: React.FC<GroupsListProps> = ({
         <thead>
           <tr>
             <th>
-              <div className="sort-header" onClick={() => onSort('name')}>
-                Name <SortIcon field="name" />
+              <div className="px-5 py-3.5 text-left text-xs font-semibold text-surface-500 uppercase tracking-wider">
+                Name
               </div>
             </th>
             <th>
-              <div className="sort-header" onClick={() => onSort('members')}>
-                Members <SortIcon field="members" />
+              <div className="px-5 py-3.5 text-left text-xs font-semibold text-surface-500 uppercase tracking-wider">
+                Members
               </div>
             </th>
             <th>
-              <div className="sort-header" onClick={() => onSort('contributions')}>
-                Contributions <SortIcon field="contributions" />
+              <div className="px-5 py-3.5 text-left text-xs font-semibold text-surface-500 uppercase tracking-wider">
+                Contributions
               </div>
             </th>
             <th>
-              <div className="sort-header" onClick={() => onSort('nextPayout')}>
-                Next Payout <SortIcon field="nextPayout" />
+              <div className="px-5 py-3.5 text-left text-xs font-semibold text-surface-500 uppercase tracking-wider">
+                Next Payout
               </div>
             </th>
-            <th>Status</th>
-            <th>Actions</th>
+            <th><div className="px-5 py-3.5 text-left text-xs font-semibold text-surface-500 uppercase tracking-wider">Status</div></th>
+            <th><div className="px-5 py-3.5 text-left text-xs font-semibold text-surface-500 uppercase tracking-wider">Actions</div></th>
           </tr>
         </thead>
         <tbody>
@@ -179,7 +165,7 @@ export const GroupsList: React.FC<GroupsListProps> = ({
                 </td>
                 <td className="whitespace-nowrap">
                   <button
-                    onClick={(e) => {
+                    onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
                       e.stopPropagation()
                       onJoinGroup?.(group.id)
                     }}
@@ -198,7 +184,7 @@ export const GroupsList: React.FC<GroupsListProps> = ({
                         d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"
                       />
                     </svg>
-                    Join
+                    {group.currentMembers >= group.maxMembers ? 'Full' : 'Join'}
                   </button>
                 </td>
               </tr>

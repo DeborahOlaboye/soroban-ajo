@@ -31,9 +31,9 @@ const sampleMembers: Member[] = Array.from({ length: 50 }, (_, i) => ({
 
 export const AdvancedDataTableExample: React.FC = () => {
   // Custom filter function
-  const filterFn = (row: Member, filters: any) => {
+  const filterFn = (row: Member, filters: Record<string, string | number>) => {
     // Search filter
-    if (filters.search) {
+    if (filters.search && typeof filters.search === 'string') {
       const query = filters.search.toLowerCase()
       const matchesSearch =
         row.name.toLowerCase().includes(query) ||
@@ -52,7 +52,7 @@ export const AdvancedDataTableExample: React.FC = () => {
     }
 
     // Contribution range filter
-    if (filters.minContributions && row.contributions < filters.minContributions) {
+    if (filters.minContributions !== undefined && typeof filters.minContributions === 'number' && row.contributions < filters.minContributions) {
       return false
     }
 
@@ -110,7 +110,7 @@ export const AdvancedDataTableExample: React.FC = () => {
       accessor: 'status',
       sortable: true,
       render: (value) => {
-        const statusConfig = {
+        const statusConfig: Record<string, { color: string, icon: string }> = {
           active: { color: 'bg-green-100 text-green-800', icon: '●' },
           inactive: { color: 'bg-gray-100 text-gray-800', icon: '○' },
           pending: { color: 'bg-yellow-100 text-yellow-800', icon: '◐' },
