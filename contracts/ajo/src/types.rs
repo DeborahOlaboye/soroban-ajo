@@ -18,38 +18,35 @@ pub enum GroupState {
 /// An Ajo (also known as Esusu or Tontine) is a rotating savings group
 /// where members contribute a fixed amount each cycle, and one member
 /// receives the full pool each round until everyone has been paid out.
+///
+/// Fields are ordered by size for optimal memory alignment:
+/// - 16 bytes: i128
+/// - 32 bytes: Address
+/// - Variable: Vec<Address>
+/// - 8 bytes: u64 fields
+/// - 4 bytes: u32 fields
+/// - 1 byte: bool
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Group {
-    /// Unique group identifier, auto-incremented from storage counter
-    pub id: u64,
+    /// Fixed contribution amount each member must pay per cycle, denominated in stroops.
+    /// 1 XLM = 10,000,000 stroops.
+    pub contribution_amount: i128,
 
     /// Address of the member who created the group.
     /// Automatically added as the first member on creation.
     pub creator: Address,
 
-    /// Fixed contribution amount each member must pay per cycle, denominated in stroops.
-    /// 1 XLM = 10,000,000 stroops.
-    pub contribution_amount: i128,
-
-    /// Duration of each cycle in seconds.
-    /// When a cycle ends, the next payout can be triggered.
-    pub cycle_duration: u64,
-
-    /// Maximum number of members allowed in the group.
-    /// Must be between 2 and 100 (inclusive).
-    pub max_members: u32,
-
     /// Ordered list of member addresses.
     /// Members receive payouts in the order they appear in this list.
     pub members: Vec<Address>,
 
-    /// Current cycle number, starts at 1 and increments after each payout.
-    pub current_cycle: u32,
+    /// Unique group identifier, auto-incremented from storage counter
+    pub id: u64,
 
-    /// Zero-based index into `members` indicating who receives the next payout.
-    /// When `payout_index == members.len()`, the group is complete.
-    pub payout_index: u32,
+    /// Duration of each cycle in seconds.
+    /// When a cycle ends, the next payout can be triggered.
+    pub cycle_duration: u64,
 
     /// Unix timestamp (seconds) when the group was created.
     pub created_at: u64,
@@ -57,6 +54,17 @@ pub struct Group {
     /// Unix timestamp (seconds) when the current cycle started.
     /// Used together with `cycle_duration` to calculate when the cycle ends.
     pub cycle_start_time: u64,
+
+    /// Maximum number of members allowed in the group.
+    /// Must be between 2 and 100 (inclusive).
+    pub max_members: u32,
+
+    /// Current cycle number, starts at 1 and increments after each payout.
+    pub current_cycle: u32,
+
+    /// Zero-based index into `members` indicating who receives the next payout.
+    /// When `payout_index == members.len()`, the group is complete.
+    pub payout_index: u32,
 
     /// Whether the group has completed all payout cycles.
     /// Once `true`, no further contributions or payouts are accepted.
@@ -74,84 +82,6 @@ pub struct Group {
 
     /// Current state of the group (Active, Cancelled, or Complete).
     pub state: GroupState,
-}
-
-/// Records a single member's contribution for a specific cycle.
-///
-/// Written to persistent storage when a member calls `contribute()`.
-/// Used to prevent double-contributions and to verify cycle completion
-/// before executing a payout.
-#[contracttype]
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct ContributionRecord {
-    /// Address of the member who made (or is expected to make) the contribution.
-    pub member: Address,
-
-    /// The group this contribution belongs to.
-    pub group_id: u64,
-
-    /// The cycle number this contribution is for.
-    pub cycle: u32,
-
-    /// Whether the member has paid their contribution for this cycle.
-    /// `true` means the contribution has been recorded; `false` means pending.
-    pub has_paid: bool,
-
-    /// Unix timestamp (seconds) when the contribution was recorded.
-    pub timestamp: u64,
-
-    /// Whether this contribution was made late (during grace period).
-    pub is_late: bool,
-
-    /// Penalty amount charged for late contribution (in stroops).
-    /// Zero if contribution was on time.
-    pub penalty_amount: i128,
-}
-
-/// Tracks penalty statistics for a member across all cycles in a group.
-#[contracttype]
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct MemberPenaltyRecord {
-    /// Address of the member.
-    pub member: Address,
-
-    /// The group this record belongs to.
-    pub group_id: u64,
-
-    /// Total number of late contributions.
-    pub late_count: u32,
-
-    /// Total number of on-time contributions.
-    pub on_time_count: u32,
-
-    /// Total penalty amount paid (in stroops).
-    pub total_penalties: i128,
-
-    /// Reliability score (0-100): percentage of on-time contributions.
-    pub reliability_score: u32,
-}
-
-/// Records that a member has received their payout for a given cycle.
-///
-/// Written to persistent storage after `execute_payout()` succeeds.
-/// Can be used for audit trails and to prevent duplicate payouts.
-#[contracttype]
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct PayoutRecord {
-    /// Address of the member who received the payout.
-    pub member: Address,
-
-    /// The group this payout belongs to.
-    pub group_id: u64,
-
-    /// The cycle number in which this payout was made.
-    pub cycle: u32,
-
-    /// Total payout amount in stroops (`contribution_amount × member_count`).
-    pub amount: i128,
-
-    /// Unix timestamp (seconds) when the payout was executed.
-    pub timestamp: u64,
 }
 
 /// Comprehensive snapshot of a group's current state.
@@ -272,6 +202,18 @@ pub struct RefundVote {
     pub timestamp: u64,
 }
 
+/// Penalty statistics for a member within a group.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MemberPenaltyRecord {
+    pub member: Address,
+    pub group_id: u64,
+    pub late_count: u32,
+    pub on_time_count: u32,
+    pub total_penalties: i128,
+    pub reliability_score: u32,
+}
+
 /// Records a refund transaction.
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -310,3 +252,26 @@ pub const VOTING_PERIOD: u64 = 604_800;
 
 /// Minimum approval percentage required for refund (51%).
 pub const REFUND_APPROVAL_THRESHOLD: u32 = 51;
+
+/// Detailed record of a member's contribution for a specific cycle.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ContributionRecord {
+    pub group_id: u64,
+    pub cycle: u32,
+    pub member: Address,
+    pub amount: i128,
+    pub timestamp: u64,
+    pub is_late: bool,
+    pub penalty_amount: i128,
+}
+
+/// Record that a member has received their payout for a given cycle.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PayoutRecord {
+    pub group_id: u64,
+    pub member: Address,
+    pub amount: i128,
+    pub timestamp: u64,
+}

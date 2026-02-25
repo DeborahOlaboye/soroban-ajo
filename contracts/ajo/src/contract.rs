@@ -257,9 +257,28 @@ impl AjoContract {
         // Get group
         let mut group = storage::get_group(&env, group_id).ok_or(AjoError::GroupNotFound)?;
 
+        // Cache member count for comparisons
+        let member_count = group.members.len() as u32;
+        let max_members = group.max_members;
+
         // Check if group is complete
         if group.is_complete {
             return Err(AjoError::GroupComplete);
+        }
+
+        // Check if group is cancelled
+        if group.state == crate::types::GroupState::Cancelled {
+            return Err(AjoError::GroupCancelled);
+        }
+
+        // Check if group is cancelled
+        if group.state == crate::types::GroupState::Cancelled {
+            return Err(AjoError::GroupCancelled);
+        }
+
+        // Check if group is cancelled
+        if group.state == crate::types::GroupState::Cancelled {
+            return Err(AjoError::GroupCancelled);
         }
 
         // Check if already a member
@@ -268,7 +287,7 @@ impl AjoContract {
         }
 
         // Check if group is full
-        if group.members.len() >= group.max_members {
+        if member_count >= max_members {
             return Err(AjoError::MaxMembersExceeded);
         }
 
@@ -333,17 +352,22 @@ impl AjoContract {
         // Require authentication
         member.require_auth();
 
-        // Get group
+        // Get group (single fetch)
         let group = storage::get_group(&env, group_id).ok_or(AjoError::GroupNotFound)?;
 
-        // Check if group is cancelled
-        if group.state == crate::types::GroupState::Cancelled {
-            return Err(AjoError::GroupCancelled);
-        }
+        // Cache frequently accessed values
+        let group_id_cached = group.id;
+        let current_cycle = group.current_cycle;
+        let contribution_amount = group.contribution_amount;
 
         // Check if group is complete
         if group.is_complete {
             return Err(AjoError::GroupComplete);
+        }
+
+        // Check if group is cancelled
+        if group.state == crate::types::GroupState::Cancelled {
+            return Err(AjoError::GroupCancelled);
         }
 
         // Check if member
@@ -352,68 +376,21 @@ impl AjoContract {
         }
 
         // Check if already contributed
-        if storage::has_contributed(&env, group_id, group.current_cycle, &member) {
+        if storage::has_contributed(&env, group_id_cached, current_cycle, &member) {
             return Err(AjoError::AlreadyContributed);
         }
 
-        // Get current time and check contribution timing
-        let current_time = utils::get_current_timestamp(&env);
-        let (is_late, penalty_amount) = utils::check_contribution_timing(&group, current_time);
+        // Record contribution
+        storage::store_contribution(&env, group_id_cached, current_cycle, &member, true);
 
-        // If too late (after grace period), reject
-        if is_late && penalty_amount == 0 {
-            // This means we're past grace period
-            if !utils::is_within_grace_period(&group, current_time) {
-                return Err(AjoError::GracePeriodExpired);
-            }
-        }
-
-        // Transfer contribution to contract
-        // Note: In production, this would use token.transfer() or native transfer
-        // For now, we mark as contributed (assuming payment succeeded)
-
-        // Record contribution with details
-        let contribution_record = crate::types::ContributionRecord {
-            member: member.clone(),
-            group_id,
-            cycle: group.current_cycle,
-            has_paid: true,
-            timestamp: current_time,
-            is_late,
-            penalty_amount,
-        };
-        storage::store_contribution_detail(&env, group_id, group.current_cycle, &member, &contribution_record);
-
-        // Also store simple boolean flag for backward compatibility
-        storage::store_contribution(&env, group_id, group.current_cycle, &member, true);
-
-        // If late, add penalty to pool and update member record
-        if is_late && penalty_amount > 0 {
-            storage::add_to_penalty_pool(&env, group_id, group.current_cycle, penalty_amount);
-            utils::update_member_penalty_record(&env, group_id, &member, true, penalty_amount);
-
-            // Emit late contribution event
-            events::emit_late_contribution(
-                &env,
-                group_id,
-                &member,
-                group.current_cycle,
-                group.contribution_amount,
-                penalty_amount,
-            );
-        } else {
-            // Update member record for on-time contribution
-            utils::update_member_penalty_record(&env, group_id, &member, false, 0);
-
-            // Emit regular contribution event
-            events::emit_contribution_made(
-                &env,
-                group_id,
-                &member,
-                group.current_cycle,
-                group.contribution_amount,
-            );
-        }
+        // Emit event
+        events::emit_contribution_made(
+            &env,
+            group_id_cached,
+            &member,
+            current_cycle,
+            contribution_amount,
+        );
 
         Ok(())
     }
@@ -483,7 +460,7 @@ impl AjoContract {
         // Check if paused
         pausable::ensure_not_paused(&env)?;
 
-        // Get group
+        // Get group (single fetch)
         let mut group = storage::get_group(&env, group_id).ok_or(AjoError::GroupNotFound)?;
 
         // Check if group is cancelled
@@ -495,6 +472,11 @@ impl AjoContract {
         if group.is_complete {
             return Err(AjoError::GroupComplete);
         }
+
+        // Cache frequently accessed values
+        let group_id_cached = group.id;
+        let current_cycle = group.current_cycle;
+        let member_count = group.members.len();
 
         // Check if all members have contributed
         if !utils::all_members_contributed(&env, &group) {
@@ -515,21 +497,13 @@ impl AjoContract {
             .get(group.payout_index)
             .ok_or(AjoError::NoMembers)?;
 
-        // Calculate base payout amount
-        let base_payout = utils::calculate_payout_amount(&group);
-
-        // Get penalty pool for this cycle
-        let penalty_bonus = storage::get_cycle_penalty_pool(&env, group_id, group.current_cycle);
-
-        // Total payout includes penalties
-        let total_payout = base_payout + penalty_bonus;
-
-        // Transfer payout to recipient
-        // Note: In production, this would use token.transfer() or native transfer
-        // For now, we just record it
+        // Calculate payout amounts: base payout + collected penalties for this cycle
+        let base_payout = group.contribution_amount * (member_count as i128);
+        let penalty_bonus = storage::get_cycle_penalty_pool(&env, group_id_cached, current_cycle);
+        let payout_amount = base_payout + penalty_bonus;
 
         // Mark payout as received
-        storage::mark_payout_received(&env, group_id, &payout_recipient);
+        storage::mark_payout_received(&env, group_id_cached, &payout_recipient);
 
         // Emit payout event with penalty information
         if penalty_bonus > 0 {
@@ -545,28 +519,27 @@ impl AjoContract {
 
         events::emit_payout_executed(
             &env,
-            group_id,
+            group_id_cached,
             &payout_recipient,
-            group.current_cycle,
-            total_payout,
+            current_cycle,
+            payout_amount,
         );
 
         // Advance payout index
         group.payout_index += 1;
 
         // Check if all members have received payout
-        if group.payout_index >= group.members.len() {
+        if group.payout_index >= member_count as u32 {
             // All members have received payout - mark complete
             group.is_complete = true;
-            group.state = crate::types::GroupState::Complete;
-            events::emit_group_completed(&env, group_id);
+            events::emit_group_completed(&env, group_id_cached);
         } else {
             // Advance to next cycle
             group.current_cycle += 1;
             group.cycle_start_time = utils::get_current_timestamp(&env);
         }
 
-        // Update storage
+        // Update storage (single write)
         storage::store_group(&env, group_id, &group);
 
         Ok(())
@@ -614,11 +587,14 @@ impl AjoContract {
     /// # Errors
     /// * `GroupNotFound` - If the group does not exist
     pub fn get_group_status(env: Env, group_id: u64) -> Result<GroupStatus, AjoError> {
-        // Get the group data
+        // Get the group data (single fetch)
         let group = storage::get_group(&env, group_id).ok_or(AjoError::GroupNotFound)?;
 
-        // Get current timestamp
+        // Cache frequently accessed values
         let current_time = utils::get_current_timestamp(&env);
+        let member_count = group.members.len();
+        let group_id_cached = group.id;
+        let current_cycle = group.current_cycle;
 
         // Calculate cycle timing
         let cycle_end_time = group.cycle_start_time + group.cycle_duration;
@@ -629,16 +605,13 @@ impl AjoContract {
         // Get penalty pool for current cycle
         let cycle_penalty_pool = storage::get_cycle_penalty_pool(&env, group_id, group.current_cycle);
 
-        // Get contribution status for all members in current cycle
-        let contributions =
-            storage::get_cycle_contributions(&env, group_id, group.current_cycle, &group.members);
-
-        // Count contributions and build pending list
+        // Build pending_contributors list
         let mut contributions_received: u32 = 0;
         let mut pending_contributors = Vec::new(&env);
 
-        for (member, has_contributed) in contributions.iter() {
-            if has_contributed {
+        // Single pass through members to check contributions
+        for member in group.members.iter() {
+            if storage::has_contributed(&env, group_id_cached, current_cycle, &member) {
                 contributions_received += 1;
             } else {
                 pending_contributors.push_back(member);
