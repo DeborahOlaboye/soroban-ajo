@@ -1,40 +1,38 @@
 // Issue #34: Implement mobile-responsive design
 // Complexity: High (200 pts)
-// Status: Placeholder
+// Status: Complete
+'use client'
+import React, { ReactNode } from 'react'
+import { Sidebar } from './Sidebar'
+import { Footer } from './Footer'
+import { TopNav } from './TopNav'
 
-import React from 'react'
+interface ResponsiveLayoutProps {
+  children: ReactNode
+  currentView?: string
+  onNavigate?: (view: string) => void
+}
 
-export const ResponsiveLayout: React.FC = () => {
-  // TODO: Replace placeholders with real responsive components
-  // TODO: Add mobile-first layout and responsive navigation
-
+export const ResponsiveLayout: React.FC<ResponsiveLayoutProps> = ({
+  children,
+  currentView,
+  onNavigate,
+}) => {
   return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <h3 className="text-xl font-bold mb-2">Responsive Layout Preview</h3>
-      <p className="text-gray-600 mb-4">
-        This section demonstrates responsive design patterns using Tailwind breakpoints.
-      </p>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {['Mobile', 'Tablet', 'Desktop', 'Wide'].map((label) => (
-          <div
-            key={label}
-            className="bg-gray-50 border rounded p-4 text-center"
-          >
-            <p className="text-sm text-gray-600">Breakpoint</p>
-            <p className="text-lg font-semibold">{label}</p>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col">
+      <TopNav />
+      {/* Main Layout with Sidebar */}
+      <div className="flex flex-1">
+        <Sidebar currentView={currentView} onNavigate={onNavigate} />
+        
+        <main className="flex-1 p-4 sm:p-6 lg:p-8">
+          <div className="max-w-7xl mx-auto">
+            {children}
           </div>
-        ))}
+        </main>
       </div>
 
-      <div className="mt-6 flex flex-col sm:flex-row gap-4">
-        <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded w-full sm:w-auto">
-          Primary Action
-        </button>
-        <button className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded w-full sm:w-auto">
-          Secondary Action
-        </button>
-      </div>
+      <Footer />
     </div>
   )
 }

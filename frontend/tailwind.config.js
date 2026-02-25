@@ -1,7 +1,7 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
-  darkMode: ['class', '[data-theme="dark"]'],
+darkMode: 'class',
+  content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}', './stories/**/*.{js,ts,jsx,tsx}'],
   theme: {
     extend: {
       colors: {
@@ -141,6 +141,14 @@ module.exports = {
         'hero-gradient': 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
         'card-gradient': 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
         'page-gradient': 'linear-gradient(180deg, #f8fafc 0%, #eef2ff 50%, #f8fafc 100%)',
+        'pattern-grid': "url('/patterns/grid.svg')",
+        'pattern-dots': "url('/patterns/dots.svg')",
+        'pattern-waves': "url('/patterns/waves.svg')",
+        'pattern-mesh': "url('/patterns/mesh.svg')",
+        'gradient-stellar': 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%)',
+        'gradient-stellar-subtle': 'linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(168, 85, 247, 0.05) 100%)',
+        'gradient-radial-glow': 'radial-gradient(circle at 50% 50%, rgba(99, 102, 241, 0.1) 0%, transparent 70%)',
+        'gradient-mesh': 'radial-gradient(at 20% 30%, rgba(99, 102, 241, 0.15) 0px, transparent 50%), radial-gradient(at 80% 70%, rgba(168, 85, 247, 0.15) 0px, transparent 50%), radial-gradient(at 50% 50%, rgba(139, 92, 246, 0.1) 0px, transparent 50%)',
       },
       animation: {
         'fade-in': 'fadeIn 0.5s ease-out',

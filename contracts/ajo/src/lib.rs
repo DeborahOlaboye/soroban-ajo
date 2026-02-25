@@ -1,4 +1,5 @@
 #![no_std]
+#![allow(dead_code)]
 
 //! # Soroban Ajo (Esusu) Contract
 //!
@@ -14,6 +15,8 @@
 mod contract;
 mod errors;
 mod events;
+mod pausable;
+mod security;
 mod storage;
 mod types;
 mod utils;
@@ -21,3 +24,4 @@ mod utils;
 pub use contract::AjoContract;
 pub use contract::AjoContractClient;
 pub use errors::AjoError;
+pub use types::{GroupState, RefundReason, RefundRequest, RefundRecord, RefundVote};

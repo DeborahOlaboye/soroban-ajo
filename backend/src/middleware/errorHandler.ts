@@ -1,49 +1,83 @@
 import { Request, Response, NextFunction } from 'express'
+import { logger } from '../utils/logger'
+import { AppError, ErrorFactory } from '../errors/AppError'
 
-export class AppError extends Error {
-  statusCode: number
-  isOperational: boolean
+import { ZodError } from 'zod'
 
-  constructor(message: string, statusCode: number = 500) {
-    super(message)
-    this.statusCode = statusCode
-    this.isOperational = true
-    Error.captureStackTrace(this, this.constructor)
-  }
-}
+// Re-export AppError for use in other modules
+export { AppError, ErrorFactory } from '../errors/AppError'
 
+/**
+ * Global error handling middleware
+ * Converts all errors to consistent API responses
+ */
 export const errorHandler = (
   err: Error | AppError,
   _req: Request,
   res: Response,
   _next: NextFunction
-): void => {
-  if (err instanceof AppError) {
-    res.status(err.statusCode).json({
-      success: false,
-      error: err.message,
-      ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
-    })
-    return
+) => {
+  // Convert unknown errors to AppError
+  let error: AppError
+
+  // Handle Zod validation errors
+  if (err instanceof ZodError) {
+    error = new AppError(
+      'Validation failed',
+      'VALIDATION_ERROR',
+      400,
+      err.errors.map((e) => ({
+        path: e.path.join('.'),
+        message: e.message,
+      }))
+    )
+  } else if (err instanceof AppError) {
+    error = err
+  } else {
+    error = ErrorFactory.fromUnknown(err)
   }
 
-  // Handle JSON parsing errors
-  if (err instanceof SyntaxError && 'body' in err) {
-    res.status(400).json({
-      success: false,
-      error: 'Invalid JSON',
-    })
-    return
-  }
-
-  // Unhandled errors
-  console.error('ERROR:', err)
-  res.status(500).json({
-    success: false,
-    error: 'Internal server error',
-    ...(process.env.NODE_ENV === 'development' && { 
-      message: err.message,
-      stack: err.stack 
-    })
+  // Log error with appropriate level
+  const logLevel = error.statusCode >= 500 ? 'error' : 'warn'
+  logger[logLevel]('Request error:', {
+    error: error.message,
+    code: error.code,
+    statusCode: error.statusCode,
+    path: req.path,
+    method: req.method,
+    requestId: res.locals.requestId,
+    ...(error.details && { details: error.details }),
+    ...(error.statusCode >= 500 && { stack: error.stack }),
   })
+
+  // Send error response
+  res.status(error.statusCode).json({
+    success: false,
+    error: error.message,
+    code: error.code,
+    ...(error.details && { details: error.details }),
+    ...(process.env.NODE_ENV === 'development' && { stack: error.stack }),
+  })
+}
+
+/**
+ * 404 Not Found handler
+ */
+export function notFoundHandler(req: Request, res: Response) {
+  res.status(404).json({
+    success: false,
+    error: 'Route not found',
+    code: 'NOT_FOUND',
+    path: req.path,
+  })
+}
+
+/**
+ * Async error wrapper
+ * Wraps async route handlers to catch errors and pass to error middleware
+ */
+export function asyncHandler(fn: (req: Request, res: Response, next: NextFunction) => Promise<unknown>) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    Promise.resolve(fn(req, res, next)).catch(next)
+  }
 }
