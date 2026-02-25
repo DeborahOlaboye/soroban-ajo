@@ -3,8 +3,6 @@ import { SorobanService } from '../services/sorobanService'
 import { NotFoundError } from '../errors/AppError'
 import { asyncHandler } from '../middleware/errorHandler'
 
-const sorobanService = new SorobanService()
-
 /**
  * Parses and validates `?page` and `?limit` query parameters.
  * Falls back to safe defaults when values are missing or invalid.
@@ -24,6 +22,12 @@ function parsePagination(query: Request['query']): { page: number; limit: number
 }
 
 export class GroupsController {
+  private sorobanService: SorobanService;
+
+  constructor(sorobanService?: SorobanService) {
+    this.sorobanService = sorobanService || new SorobanService();
+  }
+
   /**
    * GET /api/groups?page=1&limit=20
    * Returns a paginated list of all groups.

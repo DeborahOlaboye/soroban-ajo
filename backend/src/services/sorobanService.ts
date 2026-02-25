@@ -212,9 +212,8 @@ export class SorobanService {
   private readonly contract: StellarSdk.Contract
 
   constructor() {
-    this.contractId = process.env.SOROBAN_CONTRACT_ID || ''
-    this.networkPassphrase = process.env.SOROBAN_NETWORK_PASSPHRASE || StellarSdk.Networks.TESTNET
-
+    const contractId = process.env.SOROBAN_CONTRACT_ID || ''
+    const networkPassphrase = process.env.SOROBAN_NETWORK_PASSPHRASE || StellarSdk.Networks.TESTNET
     const rpcUrl = process.env.SOROBAN_RPC_URL || 'https://soroban-testnet.stellar.org'
 
     this.server = new StellarSdk.SorobanRpc.Server(rpcUrl)
