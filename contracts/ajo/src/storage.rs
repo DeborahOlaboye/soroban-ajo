@@ -205,8 +205,9 @@ pub fn get_cycle_contributions(
     cycle: u32,
     members: &Vec<Address>,
 ) -> Vec<(Address, bool)> {
+    let _capacity = members.len() as u32;
     let mut results = Vec::new(env);
-    
+
     for member in members.iter() {
         let paid = has_contributed(env, group_id, cycle, &member);
         results.push_back((member, paid));

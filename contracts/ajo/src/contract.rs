@@ -266,6 +266,21 @@ impl AjoContract {
             return Err(AjoError::GroupComplete);
         }
 
+        // Check if group is cancelled
+        if group.state == crate::types::GroupState::Cancelled {
+            return Err(AjoError::GroupCancelled);
+        }
+
+        // Check if group is cancelled
+        if group.state == crate::types::GroupState::Cancelled {
+            return Err(AjoError::GroupCancelled);
+        }
+
+        // Check if group is cancelled
+        if group.state == crate::types::GroupState::Cancelled {
+            return Err(AjoError::GroupCancelled);
+        }
+
         // Check if already a member
         if utils::is_member(&group.members, &member) {
             return Err(AjoError::AlreadyMember);
@@ -348,6 +363,11 @@ impl AjoContract {
         // Check if group is complete
         if group.is_complete {
             return Err(AjoError::GroupComplete);
+        }
+
+        // Check if group is cancelled
+        if group.state == crate::types::GroupState::Cancelled {
+            return Err(AjoError::GroupCancelled);
         }
 
         // Check if member
@@ -477,8 +497,10 @@ impl AjoContract {
             .get(group.payout_index)
             .ok_or(AjoError::NoMembers)?;
 
-        // Calculate payout amount (inline to avoid function call overhead)
-        let payout_amount = group.contribution_amount * (member_count as i128);
+        // Calculate payout amounts: base payout + collected penalties for this cycle
+        let base_payout = group.contribution_amount * (member_count as i128);
+        let penalty_bonus = storage::get_cycle_penalty_pool(&env, group_id_cached, current_cycle);
+        let payout_amount = base_payout + penalty_bonus;
 
         // Mark payout as received
         storage::mark_payout_received(&env, group_id_cached, &payout_recipient);

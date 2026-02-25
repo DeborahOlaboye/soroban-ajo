@@ -202,6 +202,18 @@ pub struct RefundVote {
     pub timestamp: u64,
 }
 
+/// Penalty statistics for a member within a group.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MemberPenaltyRecord {
+    pub member: Address,
+    pub group_id: u64,
+    pub late_count: u32,
+    pub on_time_count: u32,
+    pub total_penalties: i128,
+    pub reliability_score: u32,
+}
+
 /// Records a refund transaction.
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -240,3 +252,26 @@ pub const VOTING_PERIOD: u64 = 604_800;
 
 /// Minimum approval percentage required for refund (51%).
 pub const REFUND_APPROVAL_THRESHOLD: u32 = 51;
+
+/// Detailed record of a member's contribution for a specific cycle.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ContributionRecord {
+    pub group_id: u64,
+    pub cycle: u32,
+    pub member: Address,
+    pub amount: i128,
+    pub timestamp: u64,
+    pub is_late: bool,
+    pub penalty_amount: i128,
+}
+
+/// Record that a member has received their payout for a given cycle.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PayoutRecord {
+    pub group_id: u64,
+    pub member: Address,
+    pub amount: i128,
+    pub timestamp: u64,
+}

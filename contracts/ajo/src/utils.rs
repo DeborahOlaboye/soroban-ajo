@@ -130,3 +130,35 @@ pub fn validate_group_params(
 
     Ok(())
 }
+
+/// Validates grace period and penalty rate parameters used when creating a group.
+///
+/// * `grace_period` - must be <= 7 days (604800 seconds)
+/// * `penalty_rate` - must be between 0 and 100 inclusive
+pub fn validate_penalty_params(
+    grace_period: u64,
+    penalty_rate: u32,
+) -> Result<(), crate::errors::AjoError> {
+    const MAX_GRACE: u64 = 604_800; // 7 days
+    if grace_period > MAX_GRACE {
+        return Err(crate::errors::AjoError::InvalidGracePeriod);
+    }
+    if penalty_rate > 100 {
+        return Err(crate::errors::AjoError::InvalidPenaltyRate);
+    }
+    Ok(())
+}
+
+/// Returns the unix timestamp (seconds) when the current cycle's grace period ends.
+/// Calculated as `cycle_start_time + cycle_duration + grace_period`.
+pub fn get_grace_period_end(group: &crate::types::Group) -> u64 {
+    group.cycle_start_time + group.cycle_duration + group.grace_period
+}
+
+/// Returns `true` if the provided `current_time` falls after the cycle end
+/// and before or at the grace period end.
+pub fn is_within_grace_period(group: &crate::types::Group, current_time: u64) -> bool {
+    let cycle_end = group.cycle_start_time + group.cycle_duration;
+    let grace_end = get_grace_period_end(group);
+    current_time > cycle_end && current_time <= grace_end
+}
