@@ -43,16 +43,15 @@ function paginate<T>(items: T[], { page, limit }: PaginationParams): PaginatedRe
 }
 
 export class SorobanService {
-  private server: StellarSdk.SorobanRpc.Server
-  private contractId: string
-  private networkPassphrase: string
-
   constructor() {
-    this.contractId = process.env.SOROBAN_CONTRACT_ID || ''
-    this.networkPassphrase = process.env.SOROBAN_NETWORK_PASSPHRASE || StellarSdk.Networks.TESTNET
-
+    const contractId = process.env.SOROBAN_CONTRACT_ID || ''
+    const networkPassphrase = process.env.SOROBAN_NETWORK_PASSPHRASE || StellarSdk.Networks.TESTNET
     const rpcUrl = process.env.SOROBAN_RPC_URL || 'https://soroban-testnet.stellar.org'
-    this.server = new StellarSdk.SorobanRpc.Server(rpcUrl)
+
+    // Store for potential future use
+    void contractId
+    void networkPassphrase
+    void new StellarSdk.SorobanRpc.Server(rpcUrl)
   }
 
   /**
@@ -64,27 +63,27 @@ export class SorobanService {
     return paginate(allGroups, pagination)
   }
 
-  async getGroup(groupId: string) {
+  async getGroup(_groupId: string) {
     // TODO: Implement fetching specific group from contract
     return null
   }
 
-  async createGroup(groupData: any) {
+  async createGroup(_groupData: any) {
     // TODO: Implement group creation transaction
     return { groupId: 'placeholder' }
   }
 
-  async joinGroup(groupId: string, publicKey: string) {
+  async joinGroup(_groupId: string, _publicKey: string) {
     // TODO: Implement join group transaction
     return { success: true }
   }
 
-  async contribute(groupId: string, publicKey: string, amount: string) {
+  async contribute(_groupId: string, _publicKey: string, _amount: string) {
     // TODO: Implement contribution transaction
     return { success: true, transactionId: 'placeholder' }
   }
 
-  async getGroupMembers(groupId: string) {
+  async getGroupMembers(_groupId: string) {
     // TODO: Implement fetching group members
     return []
   }
@@ -93,17 +92,11 @@ export class SorobanService {
   //  Fetches all transactions for a group and returns a paginated slice.
   
   async getGroupTransactions(
-    groupId: string,
+    _groupId: string,
     pagination: PaginationParams
   ): Promise<PaginatedResult<any>> {
     // TODO: Replace with real contract call
     const allTransactions: any[] = []
     return paginate(allTransactions, pagination)
-  }
-
-  private async submitTransaction(transaction: StellarSdk.Transaction) {
-    // TODO: Implement transaction submission
-    const response = await this.server.sendTransaction(transaction)
-    return response
   }
 }

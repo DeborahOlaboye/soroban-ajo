@@ -1,8 +1,6 @@
 import { Request, Response, NextFunction } from 'express'
 import { SorobanService } from '../services/sorobanService'
 
-const sorobanService = new SorobanService()
-
 /**
  * Parses and validates `?page` and `?limit` query parameters.
  * Falls back to safe defaults when values are missing or invalid.
@@ -22,6 +20,12 @@ function parsePagination(query: Request['query']): { page: number; limit: number
 }
 
 export class GroupsController {
+  private sorobanService: SorobanService;
+
+  constructor(sorobanService?: SorobanService) {
+    this.sorobanService = sorobanService || new SorobanService();
+  }
+
   /**
    * GET /api/groups?page=1&limit=20
    * Returns a paginated list of all groups.
@@ -29,7 +33,7 @@ export class GroupsController {
   async listGroups(req: Request, res: Response, next: NextFunction) {
     try {
       const pagination = parsePagination(req.query)
-      const result = await sorobanService.getAllGroups(pagination)
+      const result = await this.sorobanService.getAllGroups(pagination)
 
       res.json({
         success: true,
@@ -41,16 +45,17 @@ export class GroupsController {
     }
   }
 
-  async getGroup(req: Request, res: Response, next: NextFunction) {
+  async getGroup(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { id } = req.params
-      const group = await sorobanService.getGroup(id)
+      const group = await this.sorobanService.getGroup(id)
 
       if (!group) {
-        return res.status(404).json({
+        res.status(404).json({
           success: false,
           error: 'Group not found',
         })
+        return
       }
 
       res.json({ success: true, data: group })
@@ -63,7 +68,7 @@ export class GroupsController {
     try {
       const groupData = req.body
       // TODO: Validate with Zod schema
-      const result = await sorobanService.createGroup(groupData)
+      const result = await this.sorobanService.createGroup(groupData)
       res.status(201).json({ success: true, data: result })
     } catch (error) {
       next(error)
@@ -74,7 +79,7 @@ export class GroupsController {
     try {
       const { id } = req.params
       const { publicKey } = req.body
-      const result = await sorobanService.joinGroup(id, publicKey)
+      const result = await this.sorobanService.joinGroup(id, publicKey)
       res.json({ success: true, data: result })
     } catch (error) {
       next(error)
@@ -85,7 +90,7 @@ export class GroupsController {
     try {
       const { id } = req.params
       const { amount, publicKey } = req.body
-      const result = await sorobanService.contribute(id, publicKey, amount)
+      const result = await this.sorobanService.contribute(id, publicKey, amount)
       res.json({ success: true, data: result })
     } catch (error) {
       next(error)
@@ -95,7 +100,7 @@ export class GroupsController {
   async getMembers(req: Request, res: Response, next: NextFunction) {
     try {
       const { id } = req.params
-      const members = await sorobanService.getGroupMembers(id)
+      const members = await this.sorobanService.getGroupMembers(id)
       res.json({ success: true, data: members })
     } catch (error) {
       next(error)
@@ -110,7 +115,7 @@ export class GroupsController {
     try {
       const { id } = req.params
       const pagination = parsePagination(req.query)
-      const result = await sorobanService.getGroupTransactions(id, pagination)
+      const result = await this.sorobanService.getGroupTransactions(id, pagination)
 
       res.json({
         success: true,

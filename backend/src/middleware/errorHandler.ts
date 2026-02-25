@@ -14,16 +14,26 @@ export class AppError extends Error {
 
 export const errorHandler = (
   err: Error | AppError,
-  req: Request,
+  _req: Request,
   res: Response,
-  next: NextFunction
-) => {
+  _next: NextFunction
+): void => {
   if (err instanceof AppError) {
-    return res.status(err.statusCode).json({
+    res.status(err.statusCode).json({
       success: false,
       error: err.message,
       ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
     })
+    return
+  }
+
+  // Handle JSON parsing errors
+  if (err instanceof SyntaxError && 'body' in err) {
+    res.status(400).json({
+      success: false,
+      error: 'Invalid JSON',
+    })
+    return
   }
 
   // Unhandled errors

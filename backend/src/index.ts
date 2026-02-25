@@ -28,12 +28,22 @@ app.use('/health', healthRouter)
 app.use('/api/groups', groupsRouter)
 app.use('/api/webhooks', webhooksRouter)
 
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    error: 'Not found'
+  })
+})
+
 // Error handling
 app.use(errorHandler)
 
-// Start server
-app.listen(PORT, () => {
-  // Backend server started
-})
+// Start server only if not in test mode
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(PORT, () => {
+    // Backend server started
+  })
+}
 
 export default app
