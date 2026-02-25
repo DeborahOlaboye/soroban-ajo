@@ -118,7 +118,8 @@ impl AjoContract {
     /// # Arguments
     /// * `env` - The Soroban contract environment
     /// * `creator` - Address of the group creator (automatically becomes first member)
-    /// * `contribution_amount` - Fixed amount each member contributes per cycle (in stroops, must be > 0)
+    /// * `token_address` - Address of the token contract (SAC) for contributions and payouts
+    /// * `contribution_amount` - Fixed amount each member contributes per cycle (in token units, must be > 0)
     /// * `cycle_duration` - Duration of each cycle in seconds (must be > 0)
     /// * `max_members` - Maximum number of members allowed in the group (must be >= 2 and <= 100)
     /// * `grace_period` - Grace period duration in seconds after cycle ends (default: 86400 = 24 hours)
@@ -138,6 +139,7 @@ impl AjoContract {
     pub fn create_group(
         env: Env,
         creator: Address,
+        token_address: Address,
         contribution_amount: i128,
         cycle_duration: u64,
         max_members: u32,
@@ -168,6 +170,7 @@ impl AjoContract {
         let group = Group {
             id: group_id,
             creator: creator.clone(),
+            token_address,
             contribution_amount,
             cycle_duration,
             max_members,
@@ -324,12 +327,13 @@ impl AjoContract {
 
     /// Contribute to the current cycle.
     ///
-    /// Records a member's contribution for the current cycle. Each member can contribute
-    /// once per cycle. Authentication is required. Contributions are recorded but actual
-    /// fund transfers are handled by external payment systems.
+    /// Records a member's contribution for the current cycle and transfers tokens from
+    /// the member to the contract. Each member can contribute once per cycle.
+    /// Authentication is required.
     ///
-    /// Late contributions (after cycle ends but within grace period) incur penalties.
-    /// Contributions after grace period are rejected.
+    /// The function transfers the contribution amount from the member's token balance
+    /// to the contract. Late contributions (after cycle ends but within grace period)
+    /// incur penalties. Contributions after grace period are rejected.
     ///
     /// # Arguments
     /// * `env` - The Soroban contract environment
@@ -337,7 +341,7 @@ impl AjoContract {
     /// * `group_id` - The group to contribute to
     ///
     /// # Returns
-    /// `Ok(())` on successful contribution recording
+    /// `Ok(())` on successful contribution and token transfer
     ///
     /// # Errors
     /// * `GroupNotFound` - If the group does not exist
@@ -345,6 +349,8 @@ impl AjoContract {
     /// * `AlreadyContributed` - If already contributed this cycle
     /// * `GroupComplete` - If the group has completed all cycles
     /// * `GracePeriodExpired` - If contribution is too late (after grace period)
+    /// * `InsufficientBalance` - If member doesn't have enough tokens
+    /// * `TransferFailed` - If the token transfer fails
     pub fn contribute(env: Env, member: Address, group_id: u64) -> Result<(), AjoError> {
         // Check if paused
         pausable::ensure_not_paused(&env)?;
@@ -379,6 +385,21 @@ impl AjoContract {
         if storage::has_contributed(&env, group_id_cached, current_cycle, &member) {
             return Err(AjoError::AlreadyContributed);
         }
+
+        // Get contract address for token transfer
+        let contract_address = env.current_contract_address();
+
+        // Check member balance before transfer
+        crate::token::check_balance(&env, &group.token_address, &member, contribution_amount)?;
+
+        // Transfer tokens from member to contract
+        crate::token::transfer_token(
+            &env,
+            &group.token_address,
+            &member,
+            &contract_address,
+            contribution_amount,
+        )?;
 
         // Record contribution
         storage::store_contribution(&env, group_id_cached, current_cycle, &member, true);
@@ -428,9 +449,9 @@ impl AjoContract {
     ///
     /// This is the core function that rotates payouts through group members.
     /// It verifies that all members have contributed, calculates the total payout
-    /// (including any penalties collected), distributes funds to the next recipient,
-    /// and advances the cycle. When all members have received their payout, the group
-    /// is marked complete.
+    /// (including any penalties collected), transfers tokens from the contract to
+    /// the recipient, and advances the cycle. When all members have received their
+    /// payout, the group is marked complete.
     ///
     /// Payout can only be executed after the grace period expires to ensure all
     /// late contributions are collected.
@@ -439,16 +460,18 @@ impl AjoContract {
     /// 1. Verifies all members have contributed in the current cycle
     /// 2. Ensures grace period has expired
     /// 3. Calculates total payout (contribution_amount × member_count + penalties)
-    /// 4. Records payout to the current recipient
-    /// 5. Emits payout event with penalty bonus
-    /// 6. Advances to next cycle (or marks complete if done)
+    /// 4. Verifies contract has sufficient token balance
+    /// 5. Transfers tokens from contract to recipient
+    /// 6. Records payout to the current recipient
+    /// 7. Emits payout event with penalty bonus
+    /// 8. Advances to next cycle (or marks complete if done)
     ///
     /// # Arguments
     /// * `env` - The Soroban contract environment
     /// * `group_id` - The group to execute payout for
     ///
     /// # Returns
-    /// `Ok(())` on successful payout execution
+    /// `Ok(())` on successful payout execution and token transfer
     ///
     /// # Errors
     /// * `GroupNotFound` - If the group does not exist
@@ -456,6 +479,8 @@ impl AjoContract {
     /// * `GroupComplete` - If the group has already completed all payouts
     /// * `NoMembers` - If the group has no members (should never happen)
     /// * `OutsideCycleWindow` - If grace period has not expired yet
+    /// * `InsufficientContractBalance` - If contract doesn't have enough tokens
+    /// * `TransferFailed` - If the token transfer fails
     pub fn execute_payout(env: Env, group_id: u64) -> Result<(), AjoError> {
         // Check if paused
         pausable::ensure_not_paused(&env)?;
@@ -501,6 +526,26 @@ impl AjoContract {
         let base_payout = group.contribution_amount * (member_count as i128);
         let penalty_bonus = storage::get_cycle_penalty_pool(&env, group_id_cached, current_cycle);
         let payout_amount = base_payout + penalty_bonus;
+
+        // Get contract address for token transfer
+        let contract_address = env.current_contract_address();
+
+        // Verify contract has sufficient balance
+        crate::token::check_contract_balance(
+            &env,
+            &group.token_address,
+            &contract_address,
+            payout_amount,
+        )?;
+
+        // Transfer tokens from contract to recipient
+        crate::token::transfer_token(
+            &env,
+            &group.token_address,
+            &contract_address,
+            &payout_recipient,
+            payout_amount,
+        )?;
 
         // Mark payout as received
         storage::mark_payout_received(&env, group_id_cached, &payout_recipient);
@@ -806,7 +851,7 @@ impl AjoContract {
     /// Cancel a group and refund all members.
     ///
     /// Only the group creator can cancel a group, and only before the first payout.
-    /// All members who have contributed will receive their contributions back.
+    /// All members who have contributed will receive their token contributions back.
     ///
     /// # Arguments
     /// * `env` - The Soroban contract environment
@@ -814,7 +859,7 @@ impl AjoContract {
     /// * `group_id` - The unique group identifier
     ///
     /// # Returns
-    /// `Ok(())` on successful cancellation
+    /// `Ok(())` on successful cancellation and refunds
     ///
     /// # Errors
     /// * `GroupNotFound` - If the group doesn't exist
@@ -822,6 +867,7 @@ impl AjoContract {
     /// * `CannotCancelAfterPayout` - If any payout has been executed
     /// * `GroupCancelled` - If the group is already cancelled
     /// * `GroupComplete` - If the group is already complete
+    /// * `TransferFailed` - If any token refund transfer fails
     pub fn cancel_group(env: Env, creator: Address, group_id: u64) -> Result<(), AjoError> {
         pausable::ensure_not_paused(&env)?;
         creator.require_auth();
@@ -847,9 +893,20 @@ impl AjoContract {
         }
 
         // Calculate refunds for each member who contributed
+        let contract_address = env.current_contract_address();
+        
         for member in group.members.iter() {
             if storage::has_contributed(&env, group_id, group.current_cycle, &member) {
                 let refund_amount = group.contribution_amount;
+
+                // Transfer tokens back to member
+                crate::token::transfer_token(
+                    &env,
+                    &group.token_address,
+                    &contract_address,
+                    &member,
+                    refund_amount,
+                )?;
 
                 // Store refund record
                 let refund_record = crate::types::RefundRecord {
@@ -1032,7 +1089,7 @@ impl AjoContract {
     /// Execute a refund after voting period ends.
     ///
     /// Can be called by any member after the voting period ends. If the refund
-    /// is approved (>51% votes in favor), all members receive proportional refunds
+    /// is approved (>51% votes in favor), all members receive token refunds
     /// based on their contributions.
     ///
     /// # Arguments
@@ -1041,7 +1098,7 @@ impl AjoContract {
     /// * `group_id` - The unique group identifier
     ///
     /// # Returns
-    /// `Ok(())` on successful execution
+    /// `Ok(())` on successful execution and token refunds
     ///
     /// # Errors
     /// * `GroupNotFound` - If the group doesn't exist
@@ -1049,6 +1106,7 @@ impl AjoContract {
     /// * `VotingPeriodActive` - If the voting period hasn't ended
     /// * `RefundNotApproved` - If the refund wasn't approved
     /// * `RefundAlreadyExecuted` - If the refund has already been executed
+    /// * `TransferFailed` - If any token refund transfer fails
     pub fn execute_refund(env: Env, executor: Address, group_id: u64) -> Result<(), AjoError> {
         pausable::ensure_not_paused(&env)?;
         executor.require_auth();
@@ -1085,9 +1143,20 @@ impl AjoContract {
         }
 
         // Process refunds for all members who contributed
+        let contract_address = env.current_contract_address();
+        
         for member in group.members.iter() {
             if storage::has_contributed(&env, group_id, group.current_cycle, &member) {
                 let refund_amount = group.contribution_amount;
+
+                // Transfer tokens back to member
+                crate::token::transfer_token(
+                    &env,
+                    &group.token_address,
+                    &contract_address,
+                    &member,
+                    refund_amount,
+                )?;
 
                 // Store refund record
                 let refund_record = crate::types::RefundRecord {
@@ -1118,7 +1187,7 @@ impl AjoContract {
     /// Emergency refund by admin.
     ///
     /// Allows the contract admin to force a refund in case of disputes or emergencies.
-    /// All members who have contributed receive their contributions back.
+    /// All members who have contributed receive their token contributions back.
     ///
     /// # Arguments
     /// * `env` - The Soroban contract environment
@@ -1126,12 +1195,13 @@ impl AjoContract {
     /// * `group_id` - The unique group identifier
     ///
     /// # Returns
-    /// `Ok(())` on successful emergency refund
+    /// `Ok(())` on successful emergency refund and token transfers
     ///
     /// # Errors
     /// * `Unauthorized` - If the caller is not the admin
     /// * `GroupNotFound` - If the group doesn't exist
     /// * `GroupCancelled` - If the group is already cancelled
+    /// * `TransferFailed` - If any token refund transfer fails
     pub fn emergency_refund(env: Env, admin: Address, group_id: u64) -> Result<(), AjoError> {
         admin.require_auth();
 
@@ -1150,12 +1220,22 @@ impl AjoContract {
 
         let now = utils::get_current_timestamp(&env);
         let mut total_refunded = 0i128;
+        let contract_address = env.current_contract_address();
 
         // Process refunds for all members who contributed
         for member in group.members.iter() {
             if storage::has_contributed(&env, group_id, group.current_cycle, &member) {
                 let refund_amount = group.contribution_amount;
                 total_refunded += refund_amount;
+
+                // Transfer tokens back to member
+                crate::token::transfer_token(
+                    &env,
+                    &group.token_address,
+                    &contract_address,
+                    &member,
+                    refund_amount,
+                )?;
 
                 // Store refund record
                 let refund_record = crate::types::RefundRecord {
@@ -1222,5 +1302,21 @@ impl AjoContract {
         member: Address,
     ) -> Result<crate::types::RefundRecord, AjoError> {
         storage::get_refund_record(&env, group_id, &member).ok_or(AjoError::GroupNotFound)
+    }
+
+    /// Get the contract's token balance for a specific token.
+    ///
+    /// Returns the amount of tokens held by the contract for a given token address.
+    /// Useful for checking if the contract has sufficient funds for payouts.
+    ///
+    /// # Arguments
+    /// * `env` - The Soroban contract environment
+    /// * `token_address` - Address of the token contract
+    ///
+    /// # Returns
+    /// The token balance held by the contract
+    pub fn get_contract_balance(env: Env, token_address: Address) -> i128 {
+        let contract_address = env.current_contract_address();
+        crate::token::get_balance(&env, &token_address, &contract_address)
     }
 }

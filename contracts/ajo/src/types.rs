@@ -37,6 +37,10 @@ pub struct Group {
     /// Automatically added as the first member on creation.
     pub creator: Address,
 
+    /// Token contract address for contributions and payouts.
+    /// Supports Stellar Asset Contract (SAC) tokens including XLM, USDC, and custom tokens.
+    pub token_address: Address,
+
     /// Ordered list of member addresses.
     /// Members receive payouts in the order they appear in this list.
     pub members: Vec<Address>,

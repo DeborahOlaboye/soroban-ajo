@@ -18,6 +18,7 @@ mod events;
 mod pausable;
 mod security;
 mod storage;
+mod token;
 mod types;
 mod utils;
 

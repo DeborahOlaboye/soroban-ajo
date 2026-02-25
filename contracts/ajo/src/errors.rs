@@ -115,4 +115,13 @@ pub enum AjoError {
 
     /// Cannot request refund before cycle deadline.
     CycleNotExpired = 37,
+
+    /// Token contract address is invalid or not found.
+    InvalidTokenAddress = 38,
+
+    /// Contract has insufficient token balance for payout.
+    InsufficientContractBalance = 39,
+
+    /// Token allowance is insufficient for transfer.
+    InsufficientAllowance = 40,
 }
